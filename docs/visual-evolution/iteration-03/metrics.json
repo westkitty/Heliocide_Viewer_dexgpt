@@ -1,0 +1,80 @@
+{
+  "iteration": 3,
+  "status": "CANDIDATE_PASS_ACCEPTANCE_BLOCKED",
+  "target": "High-quality stellar sprite shader",
+  "authoritative_run_id": 32221960801,
+  "authoritative_run_attempt": 2,
+  "artifact_id": 9354263130,
+  "checkpoint": "A_NORMAL",
+  "neighbor": "D_COLLAPSE",
+  "technical_gate": {
+    "npm_ci": "PASS",
+    "typecheck_contracts": "PASS",
+    "tests": "PASS",
+    "build": "PASS",
+    "browser_startup": "PASS on unchanged retry after one transient runner startup failure",
+    "before_capture": "PASS",
+    "after_capture": "PASS",
+    "neighbor_capture": "PASS",
+    "runtime_errors": 0,
+    "browser_errors": 0
+  },
+  "frame_ms": {
+    "before_p50": 16.5,
+    "before_p95": 17.9,
+    "before_p99": 19.5,
+    "after_p50": 16.4,
+    "after_p95": 19.5,
+    "after_p99": 20.5,
+    "neighbor_p50": 16.6,
+    "neighbor_p95": 18.2,
+    "neighbor_p99": 18.6,
+    "p95_delta_percent": 8.94,
+    "environment": "GitHub-hosted Chromium software WebGL; regression-screening evidence only, not representative hardware-GPU proof"
+  },
+  "sprite_shape_sample": {
+    "region": "A_NORMAL dark-sky crop x=300..820 y=140..510; bright connected components only",
+    "rejected_attempt_01_mean_width_height_ratio": 0.5701,
+    "candidate_attempt_02_mean_width_height_ratio": 0.9624,
+    "rejected_attempt_01_vertical_components": 71,
+    "rejected_attempt_01_square_components": 11,
+    "rejected_attempt_01_horizontal_components": 0,
+    "candidate_attempt_02_vertical_components": 25,
+    "candidate_attempt_02_square_components": 17,
+    "candidate_attempt_02_horizontal_components": 9,
+    "interpretation": "Revision-three point-spread footprints changed from strongly vertical to approximately screen-circular."
+  },
+  "supplemental_pixel_delta": {
+    "before_to_after_mean_absolute_rgb_delta": 0.06671597222222223,
+    "before_to_after_pixels_any_channel_delta_gt_2": 4438,
+    "before_to_after_pixels_any_channel_delta_gt_10": 2475,
+    "attempt_01_to_attempt_02_mean_absolute_rgb_delta": 0.03994837962962963,
+    "attempt_01_to_attempt_02_pixels_any_channel_delta_gt_2": 3964,
+    "note": "Pixel/component statistics are supplemental only; direct screenshot inspection is the visual basis."
+  },
+  "score": {
+    "before": {
+      "realism": 3,
+      "material": 3,
+      "lighting": 3,
+      "scale": 4,
+      "readability": 4,
+      "canon": 5,
+      "richness": 3,
+      "technical": 4,
+      "total": 29
+    },
+    "after": {
+      "realism": 4,
+      "material": 3,
+      "lighting": 4,
+      "scale": 4,
+      "readability": 4,
+      "canon": 5,
+      "richness": 4,
+      "technical": 4,
+      "total": 32
+    }
+  },
+  "acceptance_blocker": "Exact canonical primary Shard God asset is not yet published at assets/source-reference/shard-god/1761893423477.jpg.png; candidate runner used the explicitly documented ephemeral secondary-reference fallback."
+}
