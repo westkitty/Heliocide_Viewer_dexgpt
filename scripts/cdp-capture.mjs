@@ -1,7 +1,9 @@
 import { writeFileSync } from 'node:fs';
 
-const [revisionArg='0', checkpoint='A_NORMAL', output='/tmp/heliocide.png'] = process.argv.slice(2);
+const [revisionArg='0', checkpoint='A_NORMAL', output='/tmp/heliocide.png', yawArg=''] = process.argv.slice(2);
 const revision = Number(revisionArg);
+const yawOverride = yawArg === '' ? null : Number(yawArg);
+if (yawOverride !== null && !Number.isFinite(yawOverride)) throw new Error(`Invalid yaw override: ${yawArg}`);
 const port = Number(process.env.HELIOCIDE_CDP_PORT || 9227);
 const base = process.env.HELIOCIDE_BASE_URL || 'http://127.0.0.1:4173';
 const pageUrl = `${base}/?revision=${revision}&checkpoint=${encodeURIComponent(checkpoint)}&deterministic=1`;
@@ -102,13 +104,26 @@ for (let attempt = 0; attempt < 100; attempt += 1) {
 }
 if (!metrics || metrics.frames < 30) throw new Error('Runtime metrics never reached 30 deterministic frames');
 
+if (yawOverride !== null) {
+  await send('Runtime.evaluate', {
+    expression: `window.__HELIOCIDE_STATE__.yaw=${JSON.stringify(yawOverride)}; true`,
+    returnByValue: true
+  });
+  await sleep(120);
+  const refreshed = await send('Runtime.evaluate', {
+    expression: 'JSON.stringify(window.__HELIOCIDE_METRICS__ ?? null)',
+    returnByValue: true
+  });
+  if (refreshed?.result?.value && refreshed.result.value !== 'null') metrics = JSON.parse(refreshed.result.value);
+}
+
 const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false }, screenshotTimeoutMs);
 writeFileSync(output, Buffer.from(shot.data, 'base64'));
-const evidence = { pageUrl, revision, checkpoint, metrics, browserErrors, browserWarnings };
+const evidence = { pageUrl, revision, checkpoint, yawOverride, metrics, browserErrors, browserWarnings };
 writeFileSync(output.replace(/\.png$/i, '.json'), JSON.stringify(evidence, null, 2));
 const failed = Boolean(metrics.errors?.length || browserErrors.length);
 if (failed) console.error(JSON.stringify(evidence));
-else console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, warnings: browserWarnings.length, output }));
+else console.log(JSON.stringify({ revision, checkpoint, yawOverride, frames: metrics.frames, p95: metrics.p95, warnings: browserWarnings.length, output }));
 ws.close();
 const closeWarning = await closeTarget(target.id);
 if (closeWarning) console.warn(closeWarning);
