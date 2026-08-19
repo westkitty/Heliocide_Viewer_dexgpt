@@ -25,6 +25,7 @@ await new Promise((resolve, reject) => {
 let sequence = 0;
 const pending = new Map();
 const browserErrors = [];
+const browserWarnings = [];
 ws.addEventListener('message', (event) => {
   const message = JSON.parse(event.data);
   if (message.id && pending.has(message.id)) {
@@ -33,8 +34,19 @@ ws.addEventListener('message', (event) => {
     if (message.error) reject(new Error(message.error.message)); else resolve(message.result);
     return;
   }
-  if (message.method === 'Runtime.exceptionThrown') browserErrors.push(message.params?.exceptionDetails?.text || 'Runtime exception');
-  if (message.method === 'Log.entryAdded' && message.params?.entry?.level === 'error') browserErrors.push(message.params.entry.text);
+  if (message.method === 'Runtime.exceptionThrown') {
+    browserErrors.push({
+      source: 'runtime',
+      text: message.params?.exceptionDetails?.text || 'Runtime exception',
+      url: message.params?.exceptionDetails?.url || ''
+    });
+  }
+  if (message.method === 'Log.entryAdded' && message.params?.entry?.level === 'error') {
+    const entry = message.params.entry;
+    const detail = { source: entry.source || 'log', text: entry.text || 'Browser log error', url: entry.url || '' };
+    const harmlessFavicon404 = /\/favicon\.ico(?:$|\?)/.test(detail.url) && /404|Failed to load resource/i.test(detail.text);
+    if (harmlessFavicon404) browserWarnings.push(detail); else browserErrors.push(detail);
+  }
 });
 
 function send(method, params={}) {
@@ -68,10 +80,10 @@ if (!metrics || metrics.frames < 30) throw new Error('Runtime metrics never reac
 
 const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
 writeFileSync(output, Buffer.from(shot.data, 'base64'));
-const evidence = { pageUrl, revision, checkpoint, metrics, browserErrors };
+const evidence = { pageUrl, revision, checkpoint, metrics, browserErrors, browserWarnings };
 writeFileSync(output.replace(/\.png$/i, '.json'), JSON.stringify(evidence, null, 2));
 const failed = Boolean(metrics.errors?.length || browserErrors.length);
 if (failed) console.error(JSON.stringify(evidence));
-else console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, output }));
+else console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, warnings: browserWarnings.length, output }));
 ws.close();
 setTimeout(() => process.exit(failed ? 2 : 0), 100);
