@@ -20,35 +20,39 @@ jobs:
           ref: dexgpt-staging
           fetch-depth: 0
 
-      - name: Reconstruct staged binaries
+      - name: Reconstruct or retrieve binaries and record evidence
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p docs/visual-evolution/tooling
+          LOG='docs/visual-evolution/tooling/canonical-drive-stage.log'
+          : > "$LOG"
+          rc=0
 
           fetch_drive_match() {
             local expected="$1"
             local out="$2"
             shift 2
             mkdir -p "$(dirname "$out")"
+            echo "TARGET $out EXPECTED $expected" >> "$LOG"
             for id in "$@"; do
               tmp="$(mktemp)"
               for url in \
                 "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" \
                 "https://drive.google.com/uc?export=download&id=${id}&confirm=t"; do
-                if curl -L --fail --silent --show-error --retry 2 --max-time 60 -o "$tmp" "$url"; then
-                  actual="$(sha256sum "$tmp" | awk '{print $1}')"
-                  if [ "$actual" = "$expected" ]; then
-                    mv "$tmp" "$out"
-                    echo "verified $out $actual from Drive id $id"
-                    return 0
-                  fi
-                  echo "hash mismatch for Drive id $id: $actual" >&2
+                http="$(curl -L --silent --show-error --retry 1 --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
+                bytes="$(wc -c < "$tmp" | tr -d ' ')"
+                actual="$(sha256sum "$tmp" | awk '{print $1}')"
+                echo "TRY id=$id http=$http bytes=$bytes sha256=$actual" >> "$LOG"
+                if [ "$http" = '200' ] && [ "$actual" = "$expected" ]; then
+                  mv "$tmp" "$out"
+                  echo "MATCH id=$id out=$out" >> "$LOG"
+                  return 0
                 fi
               done
               rm -f "$tmp"
             done
-            echo "no Drive candidate matched $out ($expected)" >&2
+            echo "NO_MATCH out=$out" >> "$LOG"
             return 1
           }
 
@@ -58,7 +62,7 @@ jobs:
               'assets/source-reference/shard-god/1761893423477.jpg.png' \
               '1JQGkyUBru2yDz0UZKCjqpakdin6gl20m' \
               '1ZETwfDusGnwDA4JuxtQ5-W3B2UeCqYEM' \
-              '1Jv8EonzWXn_Ox25iYgBjcMYzNb0Ba-Zz'
+              '1Jv8EonzWXn_Ox25iYgBjcMYzNb0Ba-Zz' || rc=1
             fetch_drive_match \
               '7bded902f531b3419908aab60c043fe1d379a47d7db91cd3ae514fd1811c817a' \
               'assets/source-reference/shard-god/1763713752850.jpg' \
@@ -66,9 +70,15 @@ jobs:
               '1IjUNOxW5aNThEGg04iZNsXHNdMTOUcE4' \
               '1Xr7_--6UJwBasJo-a8BAwm5x_PWVzWOb' \
               '18xGx0T7rXTvDMxGAzLS9p6Vs5toqmuPy' \
-              '1Zqygp9DmNZmLsL4FpM_LuPFJQY4L_A5z'
-            rm -f .binary-stage/canonical-assets.request
+              '1Zqygp9DmNZmLsL4FpM_LuPFJQY4L_A5z' || rc=1
+            if [ "$rc" -eq 0 ]; then
+              rm -f .binary-stage/canonical-assets.request
+              echo 'RESULT PASS' >> "$LOG"
+            else
+              echo 'RESULT FAIL' >> "$LOG"
+            fi
           elif compgen -G '.binary-stage/*.parts' > /dev/null; then
+            set -e
             while IFS= read -r manifest; do
               out="$(head -n 1 "$manifest")"
               mkdir -p "$(dirname "$out")"
@@ -79,19 +89,17 @@ jobs:
               base64 -d "$out.b64" > "$out"
               rm "$out.b64"
             done < <(find .binary-stage -maxdepth 1 -name '*.parts' -print | sort)
+            echo 'RESULT PASS parts' >> "$LOG"
           else
             printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > docs/visual-evolution/tooling/binary-probe.png
+            echo 'RESULT PASS probe' >> "$LOG"
           fi
 
-      - name: Commit reconstructed binaries to staging only
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name 'DexGPT staging'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
-          if git diff --cached --quiet; then
-            exit 0
+          if ! git diff --cached --quiet; then
+            git commit -m 'staging: reconstruct binary payloads'
+            git push origin HEAD:dexgpt-staging
           fi
-          git commit -m 'staging: reconstruct binary payloads'
-          git push origin HEAD:dexgpt-staging
+          exit "$rc"
