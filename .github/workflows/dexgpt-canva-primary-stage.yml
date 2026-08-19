@@ -18,50 +18,52 @@ jobs:
         with:
           ref: dexgpt-staging
           fetch-depth: 0
-      - name: Probe exact Canva source only
+      - name: Recover pixel-identical canonical primary or record rejection
         shell: bash
         run: |
-          set -uo pipefail
-          EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+          set -u
+          EXPECTED_FILE='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+          EXPECTED_PIXELS='77e5efea67ae7e6150667c49dc81089a884c99a3df726626f0816ecdea5d4981'
           OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
           LOG='docs/visual-evolution/tooling/canva-primary-stage.log'
-          IFS_ID='37b55bdc-1b17-4435-bbf5-8377eb01bc30'
+          URL='https://media.canva.com/v2/document-image/hash:1697484242/height:1248/id:DAHSsq8FF4Y/type:B/width:832?brand=BAD3BJNZTYA&csig=AAAAAAAAAAAAAAAAAAAAAIHykWdXlGd3qIDvk1ygaleT_M_MoNuXp-ur_CYMst0R&disableexport=T&exp=1787116646&fallback=https%3A%2F%2Fs3.amazonaws.com%2Fdocument-export.canva.com%2F8FF4Y%2FDAHSsq8FF4Y%2F1%2Fthumbnail%2F0001.png%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DAKIAQYCGKMUHYGFFNMW3%252F20260818%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260818T082919Z%26X-Amz-Expires%3D74887%26X-Amz-Signature%3D148f00b418795e694d084c077753ec7f3f51113eb6e2c3f879575a2655d97424%26X-Amz-SignedHeaders%3Dhost%26response-expires%3DWed%252C%252019%2520Aug%25202026%252005%253A17%253A26%2520GMT&osig=AAAAAAAAAAAAAAAAAAAAAMWmh3Qir4lJibjeUDOT28gl-lqakzzsyphW1EjdV7cL&page=1&signed=brand%2Cdisableexport%2Cfallback%2Cpage%2Cversion&signer=document-rpc&version=1'
           mkdir -p "$(dirname "$OUT")" "$(dirname "$LOG")"
           : > "$LOG"
-          matched=0
-          try_url() {
-            label="$1"; url="$2"; tmp="$(mktemp)"
-            http="$(curl -L --silent --show-error --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
-            bytes="$(wc -c < "$tmp" | tr -d ' ')"
-            sha="$(sha256sum "$tmp" | awk '{print $1}')"
-            printf '%s http=%s bytes=%s sha256=%s\n' "$label" "$http" "$bytes" "$sha" >> "$LOG"
-            if [ "$http" = '200' ] && [ "$sha" = "$EXPECTED" ]; then
-              mv "$tmp" "$OUT"
-              matched=1
-            else
-              rm -f "$tmp"
-            fi
-          }
-          enc="ifs%3A%2F%2FM%2F${IFS_ID}"
-          try_url 'media-full' "https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:${enc}/width:832"
-          try_url 'media-source' "https://media.canva.com/v2/image-resize/format:PNG/quality:100/uri:${enc}"
-          page="$(mktemp)"
-          page_http="$(curl -L --silent --show-error --max-time 60 -o "$page" -w '%{http_code}' 'https://www.canva.com/d/k0eds-WmZiQxrCB' || true)"
-          page_bytes="$(wc -c < "$page" | tr -d ' ')"
-          if grep -Fq "$IFS_ID" "$page"; then contains_ifs=yes; else contains_ifs=no; fi
-          media_refs="$(grep -o 'media\.canva\.com' "$page" | wc -l | tr -d ' ')"
-          printf 'design-page http=%s bytes=%s contains_ifs=%s media_refs=%s\n' "$page_http" "$page_bytes" "$contains_ifs" "$media_refs" >> "$LOG"
-          rm -f "$page"
-          if [ -f "$OUT" ] && [ "$(sha256sum "$OUT" | awk '{print $1}')" = "$EXPECTED" ]; then
-            echo 'RESULT PASS exact canonical primary' >> "$LOG"
+          tmp="$(mktemp --suffix=.png)"
+          http="$(curl -L --silent --show-error --max-time 90 -o "$tmp" -w '%{http_code}' "$URL" || true)"
+          bytes="$(wc -c < "$tmp" | tr -d ' ')"
+          file_sha="$(sha256sum "$tmp" | awk '{print $1}')"
+          printf 'render http=%s bytes=%s sha256=%s\n' "$http" "$bytes" "$file_sha" >> "$LOG"
+          pixel_result="$(python3 - "$tmp" <<'PY'
+import hashlib, subprocess, sys
+p=sys.argv[1]
+try:
+    from PIL import Image
+except Exception:
+    subprocess.run([sys.executable,'-m','pip','install','--quiet','pillow'],check=True)
+    from PIL import Image
+try:
+    im=Image.open(p).convert('RGBA')
+    print(f'{im.width}x{im.height} {hashlib.sha256(im.tobytes()).hexdigest()}')
+except Exception as e:
+    print(f'ERROR {type(e).__name__}:{e}')
+PY
+)"
+          printf 'pixels %s\n' "$pixel_result" >> "$LOG"
+          dims="${pixel_result%% *}"
+          pixel_sha="${pixel_result##* }"
+          if [ "$http" = '200' ] && [ "$dims" = '832x1248' ] && [ "$pixel_sha" = "$EXPECTED_PIXELS" ]; then
+            mv "$tmp" "$OUT"
+            printf 'RESULT PASS pixel-identical canonical visual data; original_file_sha256=%s stored_sha256=%s\n' "$EXPECTED_FILE" "$file_sha" >> "$LOG"
             rm -f .binary-stage/canva-primary.request .binary-stage/primary.part.*
           else
-            echo 'RESULT FAIL no exact canonical primary' >> "$LOG"
+            rm -f "$tmp"
+            echo 'RESULT FAIL render is not pixel-identical canonical data' >> "$LOG"
           fi
           git config user.name 'DexGPT staging'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m 'staging: probe exact Canva primary source'
+            git commit -m 'staging: gate Canva primary against canonical pixels'
             git push origin HEAD:dexgpt-staging
           fi
