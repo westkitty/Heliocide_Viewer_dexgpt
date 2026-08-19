@@ -19,12 +19,56 @@ jobs:
         with:
           ref: dexgpt-staging
           fetch-depth: 0
+
       - name: Reconstruct staged binaries
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p docs/visual-evolution/tooling
-          if compgen -G '.binary-stage/*.parts' > /dev/null; then
+
+          fetch_drive_match() {
+            local expected="$1"
+            local out="$2"
+            shift 2
+            mkdir -p "$(dirname "$out")"
+            for id in "$@"; do
+              tmp="$(mktemp)"
+              for url in \
+                "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" \
+                "https://drive.google.com/uc?export=download&id=${id}&confirm=t"; do
+                if curl -L --fail --silent --show-error --retry 2 --max-time 60 -o "$tmp" "$url"; then
+                  actual="$(sha256sum "$tmp" | awk '{print $1}')"
+                  if [ "$actual" = "$expected" ]; then
+                    mv "$tmp" "$out"
+                    echo "verified $out $actual from Drive id $id"
+                    return 0
+                  fi
+                  echo "hash mismatch for Drive id $id: $actual" >&2
+                fi
+              done
+              rm -f "$tmp"
+            done
+            echo "no Drive candidate matched $out ($expected)" >&2
+            return 1
+          }
+
+          if [ -f .binary-stage/canonical-assets.request ]; then
+            fetch_drive_match \
+              '17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73' \
+              'assets/source-reference/shard-god/1761893423477.jpg.png' \
+              '1JQGkyUBru2yDz0UZKCjqpakdin6gl20m' \
+              '1ZETwfDusGnwDA4JuxtQ5-W3B2UeCqYEM' \
+              '1Jv8EonzWXn_Ox25iYgBjcMYzNb0Ba-Zz'
+            fetch_drive_match \
+              '7bded902f531b3419908aab60c043fe1d379a47d7db91cd3ae514fd1811c817a' \
+              'assets/source-reference/shard-god/1763713752850.jpg' \
+              '1jFUMxJM8gjaEvBmcXNElIzpvlPSZ7pEN' \
+              '1IjUNOxW5aNThEGg04iZNsXHNdMTOUcE4' \
+              '1Xr7_--6UJwBasJo-a8BAwm5x_PWVzWOb' \
+              '18xGx0T7rXTvDMxGAzLS9p6Vs5toqmuPy' \
+              '1Zqygp9DmNZmLsL4FpM_LuPFJQY4L_A5z'
+            rm -f .binary-stage/canonical-assets.request
+          elif compgen -G '.binary-stage/*.parts' > /dev/null; then
             while IFS= read -r manifest; do
               out="$(head -n 1 "$manifest")"
               mkdir -p "$(dirname "$out")"
@@ -38,6 +82,7 @@ jobs:
           else
             printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > docs/visual-evolution/tooling/binary-probe.png
           fi
+
       - name: Commit reconstructed binaries to staging only
         shell: bash
         run: |
