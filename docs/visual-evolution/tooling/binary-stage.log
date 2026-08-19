@@ -1,2 +1,7 @@
-trigger_sha=d19e161cc2fb281b62a524801213cbfd17058cb0
-RESULT PASS trigger-only
+trigger_sha=14cb798b771290ae64f001687145e7a9fe67da62
+canva_page_bytes=754712
+canva_candidate_urls=3
+canva_candidate_0 http=200 bytes=74745 sha256=aad67f3ae105e147e40609fc6927e0b7b90d6f8ad5c5a75fcce18eafc5038c98
+canva_candidate_1 http=403 bytes=754818 sha256=e632535e3db135957840eadfc46371d4ee442ea29279d3032b07562713753d3d
+canva_candidate_2 http=403 bytes=754709 sha256=bbd10889ad4a0e3b1f1bcc6583c7012eb791260536e6e18b8c920b78a82bffc8
+CANVA_RESULT FAIL no exact canonical primary
