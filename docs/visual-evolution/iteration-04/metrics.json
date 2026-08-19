@@ -1,0 +1,70 @@
+{
+  "iteration": 4,
+  "status": "CANDIDATE_PASS_ACCEPTANCE_BLOCKED",
+  "target": "Galactic / deep-sky structure",
+  "authoritative_run_id": 32222861051,
+  "artifact_id": 9354557303,
+  "checkpoint": "A_NORMAL",
+  "neighbor": "D_COLLAPSE",
+  "technical_gate": {
+    "npm_ci": "PASS",
+    "typecheck_contracts": "PASS",
+    "tests": "PASS",
+    "build": "PASS",
+    "browser_startup": "PASS",
+    "before_capture": "PASS",
+    "after_capture": "PASS",
+    "neighbor_capture": "PASS",
+    "runtime_errors": 0,
+    "browser_errors": 0
+  },
+  "frame_ms": {
+    "before_p50": 16.5,
+    "before_p95": 19.5,
+    "before_p99": 19.7,
+    "after_p50": 16.5,
+    "after_p95": 17.1,
+    "after_p99": 17.3,
+    "neighbor_p50": 16.6,
+    "neighbor_p95": 19.4,
+    "neighbor_p99": 19.5,
+    "environment": "GitHub-hosted Chromium software WebGL; regression-screening evidence only, not representative hardware-GPU proof"
+  },
+  "supplemental_pixel_delta": {
+    "mean_absolute_rgb_delta": 4.11534212962963,
+    "pixels_any_channel_delta_gt_2": 819725,
+    "pixels_any_channel_delta_gt_5": 668150,
+    "pixels_any_channel_delta_gt_10": 353590,
+    "top_quartile_mean_delta": 2.950211111111111,
+    "middle_half_mean_delta": 5.83102175925926,
+    "bottom_quartile_mean_delta": 1.849113888888889,
+    "max_row_mean_delta": 6.968125,
+    "max_row_index": 418,
+    "interpretation": "The revision-four change is spatially concentrated through the middle sky band rather than uniformly lifting the whole frame. Pixel metrics are supplemental; direct screenshot review is primary."
+  },
+  "score": {
+    "before": {
+      "realism": 4,
+      "material": 3,
+      "lighting": 4,
+      "scale": 4,
+      "readability": 4,
+      "canon": 5,
+      "richness": 4,
+      "technical": 4,
+      "total": 32
+    },
+    "after": {
+      "realism": 4,
+      "material": 3,
+      "lighting": 4,
+      "scale": 5,
+      "readability": 4,
+      "canon": 5,
+      "richness": 5,
+      "technical": 4,
+      "total": 34
+    }
+  },
+  "acceptance_blocker": "Exact canonical primary Shard God asset is not yet published at assets/source-reference/shard-god/1761893423477.jpg.png; candidate runner used the explicitly documented ephemeral secondary-reference fallback."
+}
