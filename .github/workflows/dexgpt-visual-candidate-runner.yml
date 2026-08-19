@@ -81,6 +81,19 @@ jobs:
           fallback='none'
           if [ -f /tmp/dexgpt-candidate-asset-fallback.txt ]; then fallback="$(cat /tmp/dexgpt-candidate-asset-fallback.txt)"; fi
           printf '# Candidate evidence\n\nBranch: `%s`\nHead: `%s`\nRevision: %s\nCheckpoint: `%s`\nNeighbor: `%s`\nAsset fallback: %s\n\nThis is candidate evidence only; it is not an accepted numbered iteration.\n' "${{ github.head_ref }}" "$(git rev-parse HEAD)" "$revision" "$checkpoint" "$neighbor" "$fallback" > "$dir/candidate-report.md"
+      - name: Capture visual-05 subpixel stability evidence
+        if: steps.candidate.outputs.iteration == '05'
+        shell: bash
+        run: |
+          set -u
+          revision='${{ steps.candidate.outputs.revision }}'
+          checkpoint='${{ steps.candidate.outputs.checkpoint }}'
+          previous=$((revision-1))
+          dir="docs/visual-evolution/iteration-${{ steps.candidate.outputs.iteration }}"
+          before_shift_rc=0; after_shift_rc=0
+          node --experimental-websocket scripts/cdp-capture.mjs "$previous" "$checkpoint" "$dir/stability-before-shift.png" 0.02 || before_shift_rc=$?
+          node --experimental-websocket scripts/cdp-capture.mjs "$revision" "$checkpoint" "$dir/stability-after-shift.png" 0.02 || after_shift_rc=$?
+          printf 'before_shift_rc=%s\nafter_shift_rc=%s\nyaw_override=0.02\n' "$before_shift_rc" "$after_shift_rc" > "$dir/stability-status.txt"
       - name: Upload candidate evidence artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -106,8 +119,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          status="docs/visual-evolution/iteration-${{ steps.candidate.outputs.iteration }}/candidate-status.txt"
+          iteration='${{ steps.candidate.outputs.iteration }}'
+          status="docs/visual-evolution/iteration-${iteration}/candidate-status.txt"
           test -f "$status"
           grep -qx 'before_rc=0' "$status"
           grep -qx 'after_rc=0' "$status"
           grep -qx 'neighbor_rc=0' "$status"
+          if [ "$iteration" = '05' ]; then
+            stability="docs/visual-evolution/iteration-${iteration}/stability-status.txt"
+            test -f "$stability"
+            grep -qx 'before_shift_rc=0' "$stability"
+            grep -qx 'after_shift_rc=0' "$stability"
+          fi
