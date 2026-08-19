@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-reduced-motion="false" data-runtime-ok="false">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Heliocide Observatory · HV-88</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <main id="app" aria-label="Heliocide Observatory interactive experience">
+    <canvas id="scene" aria-label="Observation Station HV-88 exterior viewport and Hal'Ven star system"></canvas>
+
+    <div class="station-shell" aria-hidden="true">
+      <div class="upper-rib rib-a"></div><div class="upper-rib rib-b"></div>
+      <div class="window-glass"></div>
+      <div id="breach-overlay" class="breach-overlay"><span></span><span></span><span></span></div>
+      <div class="lower-console-physical"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <header class="hud-top">
+      <div class="identity-block">
+        <span class="eyebrow">ADMINISTRATION · OBSERVATION STATION</span>
+        <strong>HV-88</strong>
+        <span id="mission-clock" class="clock">000.0 / 140 s</span>
+      </div>
+      <div class="phase-block">
+        <span id="phase-label">A · NORMAL</span>
+        <span id="runtime-status" class="runtime-state">LIVE OBSERVATION</span>
+      </div>
+    </header>
+
+    <section class="alert-ribbon" aria-live="polite">
+      <span class="signal-dot"></span>
+      <span id="alert-copy">HV-88 · HAL'VEN OBSERVATION NODE · NOMINAL</span>
+    </section>
+
+    <section class="crew-deck" aria-label="Administration station inhabitants">
+      <article class="crew crew-one" aria-label="Administration systems specialist">
+        <div class="crew-body"><b class="head"><em></em></b><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="leg l"></i><i class="leg r"></i></div>
+        <span>SYS-4</span>
+      </article>
+      <article class="crew crew-two" aria-label="Administration navigation specialist">
+        <div class="crew-body"><b class="head"><em></em></b><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="leg l"></i><i class="leg r"></i></div>
+        <span>NAV-2</span>
+      </article>
+      <article class="crew crew-three" aria-label="Administration observation specialist">
+        <div class="crew-body"><b class="head"><em></em></b><i class="torso"></i><i class="arm l"></i><i class="arm r"></i><i class="leg l"></i><i class="leg r"></i></div>
+        <span>OBS-7</span>
+      </article>
+    </section>
+
+    <aside id="dossier" class="dossier" hidden aria-label="Administration identification dossier for Shard God">
+      <div class="dossier-kicker">CONTAINMENT AUTHORITY · VERIFIED</div>
+      <div class="dossier-grid">
+        <figure>
+          <div class="reference-plate">
+            <img src="./assets/source-reference/shard-god/1761893423477.jpg.png" alt="Canonical Administration reference image of Shard God: a large matte-black reptilian humanoid figure with cyan crystalline spines and luminous cyan features">
+            <span class="legacy-label-mask mask-a" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-b" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-c" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-d" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-e" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-f" aria-hidden="true"></span>
+            <span class="legacy-label-mask mask-g" aria-hidden="true"></span>
+          </div>
+          <figcaption>PRIMARY IDENTITY REFERENCE · VISUAL AUTHORITY</figcaption>
+        </figure>
+        <div class="dossier-copy">
+          <span class="classification">CREATOR-CLASS ENTITY</span>
+          <h1>SHARD GOD</h1>
+          <dl>
+            <div><dt>STATUS</dt><dd>ACTIVE</dd></div>
+            <div><dt>AUTHORITY</dt><dd>UNBOUNDED</dd></div>
+            <div><dt>RESPONSE</dt><dd>CONTAINMENT</dd></div>
+            <div><dt>LOCAL SURVIVAL</dt><dd>NOT PRIORITIZED</dd></div>
+          </dl>
+          <p>Automated correlation only. Strategic intent remains unverified.</p>
+        </div>
+      </div>
+    </aside>
+
+    <button id="console-button" class="console-trigger" type="button" aria-keyshortcuts="E">TACTICAL CONSOLE <kbd>E</kbd></button>
+    <button id="audio-button" class="audio-trigger" type="button">ENABLE STATION AUDIO <span id="audio-status">LOCKED</span></button>
+    <button id="accessibility-button" class="access-trigger" type="button">ACCESSIBILITY</button>
+
+    <section id="console-panel" class="console-panel" hidden aria-hidden="true" aria-label="Administration tactical console">
+      <button id="close-console" class="close-button" type="button" aria-label="Close tactical console">×</button>
+      <div class="console-header"><span>HV-88 / SYSTEM OBSERVATION</span><strong>TACTICAL MODEL</strong></div>
+      <div class="console-layout">
+        <div class="schematic" aria-label="Abstract tactical containment schematic">
+          <div class="schematic-ring r1"></div><div class="schematic-ring r2"></div><div class="schematic-ring r3"></div>
+          <div class="node n1"></div><div class="node n2"></div><div class="node n3"></div><div class="node n4"></div>
+          <div class="vector v1"></div><div class="vector v2"></div>
+          <span>SCHEMATIC ABSTRACTION — NOT PHYSICAL SKY</span>
+        </div>
+        <div class="console-data">
+          <div><span>AUREAL GATE</span><b>REMOTE / LOST</b></div>
+          <div><span>STARSILK SIGNAL</span><b>NON-NATIVE MACRO ACTIVITY</b></div>
+          <div><span>AUTHORITY</span><b>SHARD GOD</b></div>
+          <div><span>HV-88 EVAC</span><b class="warning">CAPACITY EXCEEDED</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="replay" class="replay" hidden aria-label="Forensic replay controls">
+      <div class="replay-title"><span>FORENSIC REPLAY</span><small>ALL PERSONNEL DECEASED · RECORD IMMUTABLE</small></div>
+      <input id="replay-slider" type="range" min="0" max="140" step="0.1" value="138" aria-label="Replay timeline">
+      <div class="markers" aria-hidden="true"><i style="--p:5.7%">A</i><i style="--p:28.6%">C</i><i style="--p:46.4%">D</i><i style="--p:64.3%">E</i><i style="--p:80%">F</i><i style="--p:92.8%">G</i></div>
+      <div class="replay-actions">
+        <button id="replay-play" type="button">Play</button>
+        <button data-camera="0" type="button">Observer</button>
+        <button data-camera="1" type="button">Wide</button>
+        <button data-camera="2" type="button">Exterior</button>
+        <button data-camera="3" type="button">Dossier</button>
+        <button id="restart-button" type="button">Return to beginning</button>
+      </div>
+    </section>
+
+    <section id="accessibility" class="accessibility" hidden aria-label="Accessibility settings">
+      <label><input id="reduce-motion" type="checkbox"> Reduced motion</label>
+      <p>Pointer lock exits with Escape. Tactical console is available with E. All critical audio events have visible status equivalents.</p>
+    </section>
+
+    <div id="containment-achieved" class="containment-achieved" aria-live="polite">CONTAINMENT ACHIEVED</div>
+    <pre id="metrics-json" class="metrics-json" aria-hidden="true"></pre>
+  </main>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
