@@ -24,12 +24,17 @@ const visual05After = `  vec2 j=(hash22(cell+seed*1.73)-.5)*.92;
   float d=length(rev>=3.0?vec2(starDelta.x/screenAspect,starDelta.y):starDelta);
   float mag=pow((rnd-threshold)/max(1e-5,1.0-threshold),2.6);
   float radius=mix(.115,.300,mag)*sizeScale;
-  float pixelFootprint=max(fwidth(d),1e-4);
-  float stableRadius=rev>=5.0?max(radius,pixelFootprint*.92):radius;
-  float energyComp=rev>=5.0?clamp(radius/stableRadius,.72,1.0):1.0;
-  float haloRadius=rev>=5.0?mix(radius,stableRadius,.55):radius;
-  float core=rev>=3.0?exp(-d*d/(stableRadius*stableRadius*.18))*1.08*energyComp:smoothstep(radius,0.0,d);
-  float halo=rev>=3.0?exp(-d*d/(haloRadius*haloRadius*1.65))*.16*energyComp:0.0;
+  float pixelDx=fwidth(starDelta.x/screenAspect);
+  float pixelDy=fwidth(starDelta.y);
+  float pixelVariance=(pixelDx*pixelDx+pixelDy*pixelDy)/24.0;
+  float coreBaseVariance=radius*radius*.09;
+  float haloBaseVariance=radius*radius*.825;
+  float coreFilteredVariance=coreBaseVariance+pixelVariance;
+  float haloFilteredVariance=haloBaseVariance+pixelVariance;
+  float coreNorm=coreBaseVariance/max(coreFilteredVariance,1e-6);
+  float haloNorm=haloBaseVariance/max(haloFilteredVariance,1e-6);
+  float core=rev>=5.0?exp(-d*d/(2.0*coreFilteredVariance))*1.08*coreNorm:(rev>=3.0?exp(-d*d/(radius*radius*.18))*1.08:smoothstep(radius,0.0,d));
+  float halo=rev>=5.0?exp(-d*d/(2.0*haloFilteredVariance))*.16*haloNorm:(rev>=3.0?exp(-d*d/(radius*radius*1.65))*.16:0.0);
 `;
 
 const visual04Before = `  if(rev>=4.0){
