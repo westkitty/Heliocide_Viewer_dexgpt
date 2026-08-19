@@ -15,59 +15,55 @@ jobs:
   reconstruct:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out staging branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: dexgpt-staging
           fetch-depth: 0
-
-      - name: Reconstruct verified binary payloads
+      - name: Recover or assemble verified primary
         shell: bash
         run: |
           set -euo pipefail
           LOG='docs/visual-evolution/tooling/binary-stage.log'
-          mkdir -p "$(dirname "$LOG")"
+          OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
+          EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+          EXPECTED_PIXELS='77e5efea67ae7e6150667c49dc81089a884c99a3df726626f0816ecdea5d4981'
+          mkdir -p "$(dirname "$LOG")" "$(dirname "$OUT")"
           printf 'trigger_sha=%s\n' "$GITHUB_SHA" > "$LOG"
 
           if [ -f .binary-stage/canva-primary.request ]; then
-            OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
-            EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
-            PAGE="$(mktemp)"
-            URLS="$(mktemp)"
-            curl -L --silent --show-error --max-time 90 'https://www.canva.com/d/k0eds-WmZiQxrCB' -o "$PAGE" || true
-            python3 -c "import html,re,sys; t=open(sys.argv[1],errors='ignore').read().replace('\\\\/','/').replace('\\\\u0026','&'); u=[]; [u.append(html.unescape(x)) for x in re.findall(r'https://[^\\\"<> ]+',t) if ('canva.com' in x or 'amazonaws.com' in x) and x not in u]; print('\\n'.join(u))" "$PAGE" > "$URLS"
-            printf 'canva_page_bytes=%s\ncanva_candidate_urls=%s\n' "$(wc -c < "$PAGE" | tr -d ' ')" "$(wc -l < "$URLS" | tr -d ' ')" >> "$LOG"
             matched=0
-            i=0
-            while IFS= read -r url && [ "$i" -lt 200 ]; do
-              [ -n "$url" ] || continue
-              tmp="$(mktemp)"
-              http="$(curl -L --silent --show-error --max-time 45 -o "$tmp" -w '%{http_code}' "$url" || true)"
+            for url in \
+              'https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:ifs%3A%2F%2FM%2F37b55bdc-1b17-4435-bbf5-8377eb01bc30/width:832' \
+              'https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:ifs%3A%2F%2FM%2F37b55bdc-1b17-4435-bbf5-8377eb01bc30/watermark:F/width:832' \
+              'https://media.canva.com/v2/image-resize/format:PNG/quality:100/uri:ifs%3A%2F%2FM%2F37b55bdc-1b17-4435-bbf5-8377eb01bc30'; do
+              tmp="$(mktemp --suffix=.png)"
+              http="$(curl -L --silent --show-error --max-time 90 -o "$tmp" -w '%{http_code}' "$url" || true)"
               bytes="$(wc -c < "$tmp" | tr -d ' ')"
               actual="$(sha256sum "$tmp" | awk '{print $1}')"
-              printf 'canva_candidate_%s http=%s bytes=%s sha256=%s\n' "$i" "$http" "$bytes" "$actual" >> "$LOG"
+              printf 'ifs http=%s bytes=%s sha256=%s\n' "$http" "$bytes" "$actual" >> "$LOG"
               if [ "$http" = '200' ] && [ "$actual" = "$EXPECTED" ]; then
-                mkdir -p "$(dirname "$OUT")"
                 mv "$tmp" "$OUT"
                 matched=1
+                echo 'IFS_RESULT PASS exact file' >> "$LOG"
                 break
               fi
+              if [ "$http" = '200' ]; then
+                pixel="$(python3 -c "import hashlib,subprocess,sys; subprocess.run([sys.executable,'-m','pip','install','--quiet','pillow'],check=False,stdout=subprocess.DEVNULL); from PIL import Image; im=Image.open(sys.argv[1]).convert('RGBA'); print(str(im.width)+'x'+str(im.height)+' '+hashlib.sha256(im.tobytes()).hexdigest())" "$tmp" 2>/dev/null || true)"
+                printf 'ifs_pixels %s\n' "$pixel" >> "$LOG"
+                if [ "$pixel" = "832x1248 $EXPECTED_PIXELS" ]; then
+                  echo 'IFS_PIXEL_RESULT PASS visual pixels only; exact file still required' >> "$LOG"
+                fi
+              fi
               rm -f "$tmp"
-              i=$((i+1))
-            done < "$URLS"
-            rm -f "$PAGE" "$URLS"
-            if [ "$matched" -eq 1 ]; then
-              rm -f .binary-stage/canva-primary.request
-              echo 'CANVA_RESULT PASS exact canonical primary' >> "$LOG"
+            done
+            if [ "$matched" -eq 0 ]; then
+              echo 'IFS_RESULT FAIL no exact canonical file' >> "$LOG"
             else
-              echo 'CANVA_RESULT FAIL no exact canonical primary' >> "$LOG"
+              rm -f .binary-stage/canva-primary.request
             fi
           fi
 
           if [ -f .binary-stage/raw-primary.parts ]; then
-            OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
-            EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
-            mkdir -p "$(dirname "$OUT")"
             : > "$OUT"
             while IFS= read -r part; do
               [ -n "$part" ] || continue
@@ -83,8 +79,6 @@ jobs:
             fi
             rm -rf .binary-stage/raw-primary .binary-stage/raw-primary.parts
             echo 'RESULT PASS exact canonical primary' >> "$LOG"
-          elif [ ! -f .binary-stage/canva-primary.request ]; then
-            echo 'RESULT PASS trigger-only' >> "$LOG"
           fi
 
           git config user.name 'DexGPT staging'
