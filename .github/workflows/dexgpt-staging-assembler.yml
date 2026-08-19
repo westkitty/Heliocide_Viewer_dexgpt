@@ -1,0 +1,63 @@
+name: DexGPT Staging Assembler
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    if: github.head_ref == 'dexgpt-staging' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: dexgpt-staging
+          fetch-depth: 0
+
+      - name: Assemble exact canonical primary on staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG='docs/visual-evolution/tooling/staging-assembler.log'
+          mkdir -p "$(dirname "$LOG")"
+          printf 'event=%s\nactor=%s\nhead=%s\n' "$GITHUB_EVENT_NAME" "$GITHUB_ACTOR" "$GITHUB_SHA" > "$LOG"
+
+          if [ -f .binary-stage/raw-primary.parts ]; then
+            OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
+            EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+            mkdir -p "$(dirname "$OUT")"
+            : > "$OUT"
+            while IFS= read -r part; do
+              [ -n "$part" ] || continue
+              cat ".binary-stage/raw-primary/$part" >> "$OUT"
+            done < .binary-stage/raw-primary.parts
+            ACTUAL="$(sha256sum "$OUT" | awk '{print $1}')"
+            BYTES="$(wc -c < "$OUT" | tr -d ' ')"
+            printf 'primary_bytes=%s\nprimary_sha256=%s\n' "$BYTES" "$ACTUAL" >> "$LOG"
+            if [ "$ACTUAL" != "$EXPECTED" ]; then
+              rm -f "$OUT"
+              echo 'RESULT FAIL primary hash mismatch' >> "$LOG"
+              exit 1
+            fi
+            rm -rf .binary-stage/raw-primary .binary-stage/raw-primary.parts
+            echo 'RESULT PASS exact canonical primary' >> "$LOG"
+          else
+            echo 'RESULT PASS trigger-only' >> "$LOG"
+          fi
+
+          git config user.name 'DexGPT staging'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'staging: assemble verified binary payloads'
+            git push origin HEAD:dexgpt-staging
+          fi
