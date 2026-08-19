@@ -19,6 +19,18 @@ async function openTarget() {
   return response.json();
 }
 
+async function closeTarget(targetId) {
+  try {
+    const response = await fetch(`${endpoint}/json/close/${encodeURIComponent(targetId)}`, {
+      signal: AbortSignal.timeout(commandTimeoutMs)
+    });
+    if (!response.ok) return `CDP target close returned ${response.status}`;
+    return null;
+  } catch (error) {
+    return `CDP target close failed: ${error?.message || error}`;
+  }
+}
+
 const target = await openTarget();
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => {
@@ -98,4 +110,6 @@ const failed = Boolean(metrics.errors?.length || browserErrors.length);
 if (failed) console.error(JSON.stringify(evidence));
 else console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, warnings: browserWarnings.length, output }));
 ws.close();
+const closeWarning = await closeTarget(target.id);
+if (closeWarning) console.warn(closeWarning);
 setTimeout(() => process.exit(failed ? 2 : 0), 100);
