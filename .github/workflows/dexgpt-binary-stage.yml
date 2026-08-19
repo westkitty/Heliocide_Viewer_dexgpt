@@ -29,34 +29,70 @@ jobs:
           : > "$LOG"
           rc=0
 
-          fetch_drive_match() {
-            local expected="$1"
-            local out="$2"
-            shift 2
-            mkdir -p "$(dirname "$out")"
-            echo "TARGET $out EXPECTED $expected" >> "$LOG"
-            for id in "$@"; do
-              tmp="$(mktemp)"
-              for url in \
-                "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" \
-                "https://drive.google.com/uc?export=download&id=${id}&confirm=t"; do
-                http="$(curl -L --silent --show-error --retry 1 --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
-                bytes="$(wc -c < "$tmp" | tr -d ' ')"
-                actual="$(sha256sum "$tmp" | awk '{print $1}')"
-                echo "TRY id=$id http=$http bytes=$bytes sha256=$actual" >> "$LOG"
-                if [ "$http" = '200' ] && [ "$actual" = "$expected" ]; then
-                  mv "$tmp" "$out"
-                  echo "MATCH id=$id out=$out" >> "$LOG"
-                  return 0
-                fi
-              done
+          if [ -f .binary-stage/canva-primary.request ]; then
+            EXPECTED_PIXELS='77e5efea67ae7e6150667c49dc81089a884c99a3df726626f0816ecdea5d4981'
+            EXPECTED_FILE='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+            OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
+            URL='https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:ifs%3A%2F%2FM%2F37b55bdc-1b17-4435-bbf5-8377eb01bc30/watermark:F/width:832?csig=AAAAAAAAAAAAAAAAAAAAADmgHL1GktRVcBHw1w_w6OApExQj_9B_BEXc87zvC-57&exp=1787128409&osig=AAAAAAAAAAAAAAAAAAAAAHSrWPTYzw3lusnhSd_pUVunkO-ER70Anb0pztjlK2Mg&signer=media-rpc&x-canva-quality=thumbnail'
+            tmp="$(mktemp --suffix=.png)"
+            http="$(curl -L --silent --show-error --max-time 90 -o "$tmp" -w '%{http_code}' "$URL" || true)"
+            bytes="$(wc -c < "$tmp" | tr -d ' ')"
+            file_sha="$(sha256sum "$tmp" | awk '{print $1}')"
+            printf 'CANVA http=%s bytes=%s sha256=%s\n' "$http" "$bytes" "$file_sha" >> "$LOG"
+            pixel_result="$(python3 - "$tmp" <<'PY'
+import hashlib, subprocess, sys
+p=sys.argv[1]
+try:
+    from PIL import Image
+except Exception:
+    subprocess.run([sys.executable,'-m','pip','install','--quiet','pillow'],check=True)
+    from PIL import Image
+try:
+    im=Image.open(p).convert('RGBA')
+    print(f'{im.width}x{im.height} {hashlib.sha256(im.tobytes()).hexdigest()}')
+except Exception as e:
+    print(f'ERROR {type(e).__name__}:{e}')
+PY
+)"
+            printf 'CANVA_PIXELS %s\n' "$pixel_result" >> "$LOG"
+            dims="${pixel_result%% *}"
+            pixel_sha="${pixel_result##* }"
+            if [ "$http" = '200' ] && [ "$dims" = '832x1248' ] && [ "$pixel_sha" = "$EXPECTED_PIXELS" ]; then
+              mkdir -p "$(dirname "$OUT")"
+              mv "$tmp" "$OUT"
+              printf 'CANVA_RESULT PASS original_sha256=%s stored_sha256=%s\n' "$EXPECTED_FILE" "$file_sha" >> "$LOG"
+              rm -f .binary-stage/canva-primary.request .binary-stage/primary.part.*
+            else
               rm -f "$tmp"
-            done
-            echo "NO_MATCH out=$out" >> "$LOG"
-            return 1
-          }
-
-          if [ -f .binary-stage/canonical-assets.request ]; then
+              echo 'CANVA_RESULT FAIL pixel mismatch or download failure' >> "$LOG"
+            fi
+          elif [ -f .binary-stage/canonical-assets.request ]; then
+            fetch_drive_match() {
+              local expected="$1"
+              local out="$2"
+              shift 2
+              mkdir -p "$(dirname "$out")"
+              echo "TARGET $out EXPECTED $expected" >> "$LOG"
+              for id in "$@"; do
+                tmp="$(mktemp)"
+                for url in \
+                  "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" \
+                  "https://drive.google.com/uc?export=download&id=${id}&confirm=t"; do
+                  http="$(curl -L --silent --show-error --retry 1 --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
+                  bytes="$(wc -c < "$tmp" | tr -d ' ')"
+                  actual="$(sha256sum "$tmp" | awk '{print $1}')"
+                  echo "TRY id=$id http=$http bytes=$bytes sha256=$actual" >> "$LOG"
+                  if [ "$http" = '200' ] && [ "$actual" = "$expected" ]; then
+                    mv "$tmp" "$out"
+                    echo "MATCH id=$id out=$out" >> "$LOG"
+                    return 0
+                  fi
+                done
+                rm -f "$tmp"
+              done
+              echo "NO_MATCH out=$out" >> "$LOG"
+              return 1
+            }
             fetch_drive_match \
               '17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73' \
               'assets/source-reference/shard-god/1761893423477.jpg.png' \
