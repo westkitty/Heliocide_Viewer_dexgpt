@@ -1,0 +1,87 @@
+name: DexGPT Canva Primary Stage
+
+on:
+  push:
+    branches: [dexgpt-staging]
+    paths:
+      - '.github/workflows/dexgpt-canva-primary-stage.yml'
+      - '.binary-stage/canva-primary.request'
+
+permissions:
+  contents: write
+
+jobs:
+  recover-primary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dexgpt-staging
+          fetch-depth: 0
+      - name: Probe exact Canva source only
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+          OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
+          LOG='docs/visual-evolution/tooling/canva-primary-stage.log'
+          IFS_ID='37b55bdc-1b17-4435-bbf5-8377eb01bc30'
+          mkdir -p "$(dirname "$OUT")" "$(dirname "$LOG")"
+          : > "$LOG"
+          matched=0
+          try_url() {
+            label="$1"; url="$2"; tmp="$(mktemp)"
+            http="$(curl -L --silent --show-error --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
+            bytes="$(wc -c < "$tmp" | tr -d ' ')"
+            sha="$(sha256sum "$tmp" | awk '{print $1}')"
+            printf '%s http=%s bytes=%s sha256=%s\n' "$label" "$http" "$bytes" "$sha" >> "$LOG"
+            if [ "$http" = 200 ] && [ "$sha" = "$EXPECTED" ]; then
+              mv "$tmp" "$OUT"; matched=1; return 0
+            fi
+            rm -f "$tmp"
+          }
+          enc="ifs%3A%2F%2FM%2F${IFS_ID}"
+          try_url 'media-full' "https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:${enc}/width:832" || true
+          try_url 'media-source' "https://media.canva.com/v2/image-resize/format:PNG/quality:100/uri:${enc}" || true
+          if [ "$matched" -eq 0 ]; then
+            page="$(mktemp)"
+            curl -L --silent --show-error --max-time 60 'https://www.canva.com/d/k0eds-WmZiQxrCB' -o "$page" || true
+            python3 - "$page" "$EXPECTED" "$OUT" "$LOG" <<'PY'
+import html, re, subprocess, sys, tempfile, urllib.parse
+page, expected, out, log = sys.argv[1:]
+text = open(page, 'r', errors='ignore').read()
+urls=[]
+for raw in re.findall(r'https?[^"\'<> ]+', text):
+    u=html.unescape(raw).replace('\\u0026','&').replace('\\/','/')
+    if 'canva.com' in u or 'amazonaws.com' in u:
+        u=urllib.parse.unquote(u)
+        if u not in urls: urls.append(u)
+with open(log,'a') as f: f.write(f'page_bytes={len(text)} candidate_urls={len(urls)}\n')
+for i,u in enumerate(urls[:80]):
+    with tempfile.NamedTemporaryFile(delete=False) as t: p=t.name
+    r=subprocess.run(['curl','-L','--silent','--show-error','--max-time','30','-o',p,'-w','%{http_code}',u],capture_output=True,text=True)
+    try:
+        data=open(p,'rb').read()
+        import hashlib
+        sha=hashlib.sha256(data).hexdigest()
+        with open(log,'a') as f: f.write(f'candidate-{i} http={r.stdout.strip()} bytes={len(data)} sha256={sha}\n')
+        if r.stdout.strip()=='200' and sha==expected:
+            open(out,'wb').write(data)
+            break
+    except Exception:
+        pass
+PY
+          fi
+          if [ -f "$OUT" ] && [ "$(sha256sum "$OUT" | awk '{print $1}')" = "$EXPECTED" ]; then
+            echo 'RESULT PASS exact canonical primary' >> "$LOG"
+            rm -f .binary-stage/canva-primary.request .binary-stage/primary.part.*
+          else
+            echo 'RESULT FAIL no exact canonical primary' >> "$LOG"
+          fi
+          git config user.name 'DexGPT staging'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'staging: probe exact Canva primary source'
+            git push origin HEAD:dexgpt-staging
+          fi
