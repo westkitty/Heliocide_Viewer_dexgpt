@@ -21,8 +21,9 @@
 ## Current main baseline
 
 - Capture command waits are bounded; software-render screenshot capture has a separate 45-second ceiling.
-- `scripts/cdp-capture.mjs` closes each completed Chromium CDP target after evidence is written so sequential software-WebGL captures do not accumulate rendering tabs.
+- `scripts/cdp-capture.mjs` closes each completed Chromium CDP target after evidence is written and supports an optional deterministic yaw override for controlled subpixel stability evidence.
 - Candidate workflow is serialized per `dexgpt-visual-*` branch with stale runs cancelled so evidence commits cannot race each other.
+- Visual-05 candidates automatically receive two additional yaw=0.02 captures, one for the previous revision and one for revision five.
 - `scripts/capture.sh` has its required `scripts/cdp-capture.mjs` helper in the target repository.
 - `scripts/serve.mjs` suppresses Chromium's implicit favicon error with a no-content response.
 - `.github/workflows/dexgpt-visual-candidate-runner.yml` performs `npm ci`, full validation, deterministic Chromium/WebGL startup, matched 1600x900 captures, artifact upload, evidence persistence, and proof enforcement.
@@ -89,7 +90,22 @@
 - Direct review found the rejected global wash removed: most sky remains near-black while a faint structured band crosses the middle field; mottling and an interrupted dark lane are visible without turning the sky into neon/fog.
 - Supplemental localization screen: mean RGB delta about 5.83 through the middle half versus 2.95 top quartile and 1.85 bottom quartile, confirming the change is spatially concentrated rather than a global tint.
 - Software-WebGL timing: before p95 19.5 ms; after p95 17.1 ms; D_COLLAPSE p95 19.4 ms. No candidate regression observed; representative hardware remains unverified.
-- Candidate report, rejected-attempt record, metrics, and bug sweep are stored under `docs/visual-evolution/iteration-04/` on the candidate branch.
+- Verdict: **CANDIDATE PASS / NUMBERED ACCEPTANCE BLOCKED**.
+- Count contribution: **0**.
+
+## Visual-05 candidate
+
+- Branch: `dexgpt-visual-05-candidate`; draft PR `#6` closed and unmerged.
+- Target: starfield stability / antialiasing.
+- A visual-05-only deterministic yaw=0.02 stability probe was added because one static frame cannot prove subpixel stability.
+- Attempt 01: **REJECTED** despite green CI. A heuristic derivative minimum-radius blur looked acceptable statically but worsened registered motion residuals and did not prove the target.
+- Attempt 02 implementation head: `fb3f7210965f859c696c3c1c01a8ef33ebff1735`.
+- Attempt 02 convolves the existing visual-03 Gaussian core/halo variance with estimated pixel-box variance from shader derivatives, then normalizes amplitude by base/effective variance to approximately conserve two-dimensional energy. Earlier revision formulas remain unchanged.
+- Authoritative run: `32224010941`; artifact `9354949445`.
+- Full validation, normal A_NORMAL revision-four/revision-five pair, D_COLLAPSE neighbor, both yaw=0.02 shifted captures, runtime/browser checks, artifact persistence, and proof gate passed.
+- Supplemental registered dark-sky analysis: high-frequency residual improved about 9.2%; bright-star residual improved about 31.1%; phase-correlation response improved from about 0.968 to 0.977; integrated high-frequency energy drift remained close to baseline (-3.46% vs -3.03%).
+- Software-WebGL timing: before p95 17.6 ms; after p95 17.2 ms; D_COLLAPSE p95 17.2 ms. No material candidate regression observed.
+- Candidate report, rejected-attempt record, metrics, and bug sweep are stored under `docs/visual-evolution/iteration-05/` on the candidate branch.
 - Verdict: **CANDIDATE PASS / NUMBERED ACCEPTANCE BLOCKED**.
 - Count contribution: **0**.
 
@@ -114,8 +130,8 @@
 
 ## Current next action
 
-1. Continue cumulative candidate engineering with visual-05, `Starfield stability / antialiasing`, carrying visual-02 distribution, visual-03 point-spread, and visual-04 deep-sky structure forward.
-2. Do not rely on a single static screenshot to prove stability. Add a deterministic subpixel-camera stability probe that compares the same star field across controlled fractional camera offsets while preserving the normal A_NORMAL before/after and D_COLLAPSE neighbor evidence.
-3. Restrict visual-05 implementation to sampling/point-spread stability and antialiasing; do not consume visual-06 exposure-integration work.
-4. Keep all candidate work uncounted until the exact canonical primary is published and acceptance can run with no fallback.
+1. Continue cumulative candidate engineering with visual-06, `Starfield / exposure integration`, carrying visual-02 through visual-05 behavior forward.
+2. Use `D_COLLAPSE` as the primary matched checkpoint and `A_NORMAL` as the neighbor so the iteration proves the starfield responds coherently to the heliocide without darkening normal operation.
+3. Restrict visual-06 to deterministic starfield/deep-sky exposure integration; do not consume visual-09 photosphere, visual-11 system illumination, or visual-20 post-collapse lighting work.
+4. Keep all candidate work uncounted until the exact canonical primary is published and the acceptance gate can run with no fallback.
 5. Once exact primary transfer is solved, rerun visual-01 acceptance against real canon, create the atomic `visual-01:` commit only after every gate passes, remotely verify it, then replay the already-proven candidate deltas sequentially into numbered acceptance commits without skipping required proof.
