@@ -7,9 +7,13 @@ const base = process.env.HELIOCIDE_BASE_URL || 'http://127.0.0.1:4173';
 const pageUrl = `${base}/?revision=${revision}&checkpoint=${encodeURIComponent(checkpoint)}&deterministic=1`;
 const endpoint = `http://127.0.0.1:${port}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const commandTimeoutMs = Number(process.env.HELIOCIDE_CDP_COMMAND_TIMEOUT_MS || 10000);
 
 async function openTarget() {
-  const response = await fetch(`${endpoint}/json/new?${encodeURIComponent(pageUrl)}`, { method: 'PUT' });
+  const response = await fetch(`${endpoint}/json/new?${encodeURIComponent(pageUrl)}`, {
+    method: 'PUT',
+    signal: AbortSignal.timeout(commandTimeoutMs)
+  });
   if (!response.ok) throw new Error(`CDP target creation failed: ${response.status}`);
   return response.json();
 }
@@ -17,7 +21,7 @@ async function openTarget() {
 const target = await openTarget();
 const ws = new WebSocket(target.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => {
-  const timer = setTimeout(() => reject(new Error('CDP websocket open timeout')), 10000);
+  const timer = setTimeout(() => reject(new Error('CDP websocket open timeout')), commandTimeoutMs);
   ws.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
   ws.addEventListener('error', () => { clearTimeout(timer); reject(new Error('CDP websocket error')); }, { once: true });
 });
@@ -49,10 +53,17 @@ ws.addEventListener('message', (event) => {
   }
 });
 
-function send(method, params={}) {
+function send(method, params={}, timeoutMs=commandTimeoutMs) {
   const id = ++sequence;
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`CDP command timeout: ${method}`));
+    }, timeoutMs);
+    pending.set(id, {
+      resolve: (value) => { clearTimeout(timer); resolve(value); },
+      reject: (error) => { clearTimeout(timer); reject(error); }
+    });
     ws.send(JSON.stringify({ id, method, params }));
   });
 }
