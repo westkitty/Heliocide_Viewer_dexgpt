@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: dexgpt-visual-candidate-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-and-capture:
     if: startsWith(github.head_ref, 'dexgpt-visual-') && github.actor != 'github-actions[bot]'
