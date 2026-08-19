@@ -77,6 +77,14 @@ jobs:
           fallback='none'
           if [ -f /tmp/dexgpt-candidate-asset-fallback.txt ]; then fallback="$(cat /tmp/dexgpt-candidate-asset-fallback.txt)"; fi
           printf '# Candidate evidence\n\nBranch: `%s`\nHead: `%s`\nRevision: %s\nCheckpoint: `%s`\nNeighbor: `%s`\nAsset fallback: %s\n\nThis is candidate evidence only; it is not an accepted numbered iteration.\n' "${{ github.head_ref }}" "$(git rev-parse HEAD)" "$revision" "$checkpoint" "$neighbor" "$fallback" > "$dir/candidate-report.md"
+      - name: Upload candidate evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-candidate-${{ steps.candidate.outputs.iteration }}-${{ github.run_id }}
+          path: docs/visual-evolution/iteration-${{ steps.candidate.outputs.iteration }}
+          if-no-files-found: error
+          retention-days: 7
       - name: Persist candidate evidence
         if: always()
         shell: bash
