@@ -21,7 +21,7 @@ jobs:
       - name: Probe exact Canva source only
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
           OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
           LOG='docs/visual-evolution/tooling/canva-primary-stage.log'
@@ -35,43 +35,23 @@ jobs:
             bytes="$(wc -c < "$tmp" | tr -d ' ')"
             sha="$(sha256sum "$tmp" | awk '{print $1}')"
             printf '%s http=%s bytes=%s sha256=%s\n' "$label" "$http" "$bytes" "$sha" >> "$LOG"
-            if [ "$http" = 200 ] && [ "$sha" = "$EXPECTED" ]; then
-              mv "$tmp" "$OUT"; matched=1; return 0
+            if [ "$http" = '200' ] && [ "$sha" = "$EXPECTED" ]; then
+              mv "$tmp" "$OUT"
+              matched=1
+            else
+              rm -f "$tmp"
             fi
-            rm -f "$tmp"
           }
           enc="ifs%3A%2F%2FM%2F${IFS_ID}"
-          try_url 'media-full' "https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:${enc}/width:832" || true
-          try_url 'media-source' "https://media.canva.com/v2/image-resize/format:PNG/quality:100/uri:${enc}" || true
-          if [ "$matched" -eq 0 ]; then
-            page="$(mktemp)"
-            curl -L --silent --show-error --max-time 60 'https://www.canva.com/d/k0eds-WmZiQxrCB' -o "$page" || true
-            python3 - "$page" "$EXPECTED" "$OUT" "$LOG" <<'PY'
-import html, re, subprocess, sys, tempfile, urllib.parse
-page, expected, out, log = sys.argv[1:]
-text = open(page, 'r', errors='ignore').read()
-urls=[]
-for raw in re.findall(r'https?[^"\'<> ]+', text):
-    u=html.unescape(raw).replace('\\u0026','&').replace('\\/','/')
-    if 'canva.com' in u or 'amazonaws.com' in u:
-        u=urllib.parse.unquote(u)
-        if u not in urls: urls.append(u)
-with open(log,'a') as f: f.write(f'page_bytes={len(text)} candidate_urls={len(urls)}\n')
-for i,u in enumerate(urls[:80]):
-    with tempfile.NamedTemporaryFile(delete=False) as t: p=t.name
-    r=subprocess.run(['curl','-L','--silent','--show-error','--max-time','30','-o',p,'-w','%{http_code}',u],capture_output=True,text=True)
-    try:
-        data=open(p,'rb').read()
-        import hashlib
-        sha=hashlib.sha256(data).hexdigest()
-        with open(log,'a') as f: f.write(f'candidate-{i} http={r.stdout.strip()} bytes={len(data)} sha256={sha}\n')
-        if r.stdout.strip()=='200' and sha==expected:
-            open(out,'wb').write(data)
-            break
-    except Exception:
-        pass
-PY
-          fi
+          try_url 'media-full' "https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:${enc}/width:832"
+          try_url 'media-source' "https://media.canva.com/v2/image-resize/format:PNG/quality:100/uri:${enc}"
+          page="$(mktemp)"
+          page_http="$(curl -L --silent --show-error --max-time 60 -o "$page" -w '%{http_code}' 'https://www.canva.com/d/k0eds-WmZiQxrCB' || true)"
+          page_bytes="$(wc -c < "$page" | tr -d ' ')"
+          if grep -Fq "$IFS_ID" "$page"; then contains_ifs=yes; else contains_ifs=no; fi
+          media_refs="$(grep -o 'media\.canva\.com' "$page" | wc -l | tr -d ' ')"
+          printf 'design-page http=%s bytes=%s contains_ifs=%s media_refs=%s\n' "$page_http" "$page_bytes" "$contains_ifs" "$media_refs" >> "$LOG"
+          rm -f "$page"
           if [ -f "$OUT" ] && [ "$(sha256sum "$OUT" | awk '{print $1}')" = "$EXPECTED" ]; then
             echo 'RESULT PASS exact canonical primary' >> "$LOG"
             rm -f .binary-stage/canva-primary.request .binary-stage/primary.part.*
