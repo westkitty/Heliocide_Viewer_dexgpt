@@ -8,6 +8,7 @@ const pageUrl = `${base}/?revision=${revision}&checkpoint=${encodeURIComponent(c
 const endpoint = `http://127.0.0.1:${port}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const commandTimeoutMs = Number(process.env.HELIOCIDE_CDP_COMMAND_TIMEOUT_MS || 10000);
+const screenshotTimeoutMs = Number(process.env.HELIOCIDE_CDP_SCREENSHOT_TIMEOUT_MS || 45000);
 
 async function openTarget() {
   const response = await fetch(`${endpoint}/json/new?${encodeURIComponent(pageUrl)}`, {
@@ -89,7 +90,7 @@ for (let attempt = 0; attempt < 100; attempt += 1) {
 }
 if (!metrics || metrics.frames < 30) throw new Error('Runtime metrics never reached 30 deterministic frames');
 
-const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false });
+const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false }, screenshotTimeoutMs);
 writeFileSync(output, Buffer.from(shot.data, 'base64'));
 const evidence = { pageUrl, revision, checkpoint, metrics, browserErrors, browserWarnings };
 writeFileSync(output.replace(/\.png$/i, '.json'), JSON.stringify(evidence, null, 2));
