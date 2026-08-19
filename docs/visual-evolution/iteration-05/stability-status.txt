@@ -1,0 +1,3 @@
+before_shift_rc=0
+after_shift_rc=0
+yaw_override=0.02

@@ -47,6 +47,25 @@ vec3 kelvin(float k){
 float sdCircle(vec2 p,float r){return length(p)-r;}
 float aa(float d,float w){return 1.0-smoothstep(-w,w,d);}
 
+vec3 starPopulationLayer(vec2 p,float scale,vec2 seed,float baseThreshold,float densitySpread,float exposure,float rev,float sizeScale,float energyScale){
+  vec2 grid=p*scale;
+  vec2 cell=floor(grid);
+  vec2 f=fract(grid)-.5;
+  float density=smoothstep(.24,.88,noise((cell+seed*37.0)*.020));
+  float threshold=clamp(baseThreshold-density*densitySpread,.970,.9998);
+  float rnd=hash21(cell+seed);
+  if(rnd<=threshold) return vec3(0.0);
+  vec2 j=(hash22(cell+seed*1.73)-.5)*.92;
+  float d=length(f-j);
+  float mag=pow((rnd-threshold)/max(1e-5,1.0-threshold),2.6);
+  float radius=mix(.115,.300,mag)*sizeScale;
+  float core=rev>=3.0?exp(-d*d/(radius*radius*.25))*1.4:smoothstep(radius,0.0,d);
+  float halo=rev>=3.0?exp(-d*d/(radius*radius*2.6))*.34:0.0;
+  float temp=hash21(cell+seed+81.7);
+  vec3 sc=kelvin(temp);
+  return sc*(core+halo)*mix(.16,1.35,mag)*exposure*energyScale;
+}
+
 vec3 starField(vec2 uv,float exposure,float wall){
   vec3 c=vec3(0.0);
   float rev=uRevision;
@@ -58,21 +77,21 @@ vec3 starField(vec2 uv,float exposure,float wall){
     c += vec3(.032,.035,.075)*band*(.35+.65*dust);
     c *= .7+.3*noise(p*5.0);
   }
-  vec2 grid=p*220.0;
-  vec2 cell=floor(grid);
-  vec2 f=fract(grid)-.5;
-  float rnd=hash21(cell);
-  vec2 j=(hash22(cell)-.5)*.78;
-  float d=length(f-j);
-  float threshold = rev>=2.0 ? mix(.994,.970,clamp(abs(p.y)*.6,0.0,1.0)) : .985;
-  if(rnd>threshold){
-    float mag = rev>=2.0 ? pow((rnd-threshold)/(1.0-threshold),3.2) : .6;
-    float radius = mix(.017,.045,mag);
-    float core = rev>=3.0 ? exp(-d*d/(radius*radius*.25))*1.4 : smoothstep(radius,0.0,d);
-    float halo = rev>=3.0 ? exp(-d*d/(radius*radius*2.6))*.34 : 0.0;
-    float temp=hash21(cell+81.7);
-    vec3 sc=rev>=2.0?kelvin(temp):vec3(.8,.9,1.0);
-    c += sc*(core+halo)*mix(.18,1.5,mag)*exposure;
+  if(rev<2.0){
+    vec2 grid=p*220.0;
+    vec2 cell=floor(grid);
+    vec2 f=fract(grid)-.5;
+    float rnd=hash21(cell);
+    vec2 j=(hash22(cell)-.5)*.78;
+    float d=length(f-j);
+    if(rnd>.985){
+      float radius=.034;
+      float core=smoothstep(radius,0.0,d);
+      c += vec3(.8,.9,1.0)*core*.6*exposure;
+    }
+  }else{
+    c += starPopulationLayer(p,150.0,vec2(19.1,73.7),.9988,.0120,exposure,rev,1.0,1.0);
+    c += starPopulationLayer(p,280.0,vec2(113.4,31.9),.99965,.0035,exposure,rev,.82,.42);
   }
   if(rev>=5.0){ c = min(c,vec3(2.4)); }
   return c*wall;
