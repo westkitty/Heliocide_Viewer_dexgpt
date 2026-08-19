@@ -1,0 +1,90 @@
+{
+  "iteration": 5,
+  "status": "CANDIDATE_PASS_ACCEPTANCE_BLOCKED",
+  "target": "Starfield stability / antialiasing",
+  "authoritative_run_id": 32224010941,
+  "artifact_id": 9354949445,
+  "checkpoint": "A_NORMAL",
+  "neighbor": "D_COLLAPSE",
+  "stability_probe": {
+    "yaw_override": 0.02,
+    "crop": "x=70..800, y=135..400; dark-sky region excluding primary star and planet",
+    "registration": "phase correlation on high-pass luminance, then subpixel affine alignment",
+    "revision_4": {
+      "measured_shift_x_px": -0.3053972901328734,
+      "measured_shift_y_px": 0.00041252967000104945,
+      "phase_correlation_response": 0.9678221958866826,
+      "aligned_high_frequency_mae": 0.08410441875457764,
+      "aligned_bright_star_mae": 11.7177734375,
+      "aligned_positive_energy_delta_percent": -3.0288212299346924
+    },
+    "revision_5": {
+      "measured_shift_x_px": -0.2776501618479301,
+      "measured_shift_y_px": -0.026182418076274416,
+      "phase_correlation_response": 0.9771191189612871,
+      "aligned_high_frequency_mae": 0.07639039307832718,
+      "aligned_bright_star_mae": 8.069281578063965,
+      "aligned_positive_energy_delta_percent": -3.4586215019226074
+    },
+    "improvement": {
+      "aligned_high_frequency_mae_percent": 9.17,
+      "aligned_bright_star_mae_percent": 31.14,
+      "phase_correlation_response": "improved",
+      "energy_drift_difference_percentage_points": -0.43
+    },
+    "interpretation": "The energy-conserving pixel-footprint Gaussian materially reduces subpixel star-shape/intensity residuals while keeping integrated crop energy drift close to the revision-four baseline."
+  },
+  "technical_gate": {
+    "npm_ci": "PASS",
+    "typecheck_contracts": "PASS",
+    "tests": "PASS",
+    "build": "PASS",
+    "browser_startup": "PASS",
+    "before_capture": "PASS",
+    "after_capture": "PASS",
+    "neighbor_capture": "PASS",
+    "stability_before_shift_capture": "PASS",
+    "stability_after_shift_capture": "PASS",
+    "runtime_errors": 0,
+    "browser_errors": 0
+  },
+  "frame_ms": {
+    "before_p50": 16.5,
+    "before_p95": 17.6,
+    "before_p99": 19.3,
+    "after_p50": 16.4,
+    "after_p95": 17.2,
+    "after_p99": 17.5,
+    "neighbor_p50": 16.4,
+    "neighbor_p95": 17.2,
+    "neighbor_p99": 18.0,
+    "stability_before_p95": 17.1,
+    "stability_after_p95": 17.6,
+    "environment": "GitHub-hosted Chromium software WebGL; regression-screening evidence only, not representative hardware-GPU proof"
+  },
+  "score": {
+    "before": {
+      "realism": 4,
+      "material": 3,
+      "lighting": 4,
+      "scale": 5,
+      "readability": 4,
+      "canon": 5,
+      "richness": 5,
+      "technical": 4,
+      "total": 34
+    },
+    "after": {
+      "realism": 4,
+      "material": 3,
+      "lighting": 4,
+      "scale": 5,
+      "readability": 4,
+      "canon": 5,
+      "richness": 5,
+      "technical": 5,
+      "total": 35
+    }
+  },
+  "acceptance_blocker": "Exact canonical primary Shard God asset is not yet published at assets/source-reference/shard-god/1761893423477.jpg.png; candidate runner used the explicitly documented ephemeral secondary-reference fallback."
+}
