@@ -1,0 +1,58 @@
+{
+  "pageUrl": "http://127.0.0.1:4173/?revision=0&checkpoint=A_NORMAL&deterministic=1",
+  "revision": 0,
+  "checkpoint": "A_NORMAL",
+  "metrics": {
+    "revision": 0,
+    "frames": 30,
+    "p50": 16.5,
+    "p95": 17.2,
+    "p99": 19.1,
+    "maxFrameMs": 50,
+    "errors": [],
+    "renderer": {
+      "renderer": "WebKit WebGL",
+      "vendor": "WebKit",
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "shadingLanguage": "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
+      "width": 1600,
+      "height": 900
+    },
+    "time": 8,
+    "phase": "A",
+    "checkpoint": "A_NORMAL",
+    "cameraMode": 0,
+    "visualTarget": "baseline",
+    "captureMode": "deterministic-timer",
+    "frameSamples": [
+      16.2,
+      16.5,
+      16.9,
+      17,
+      17.2,
+      16.8,
+      16.6,
+      16.5,
+      16.5,
+      16.6,
+      50,
+      16.3,
+      16.7,
+      16.4,
+      16.4,
+      16.1,
+      16.5,
+      16.4,
+      16.4,
+      16.4,
+      16.4,
+      17.1,
+      16.4,
+      16.5,
+      19.1
+    ]
+  },
+  "browserErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}
