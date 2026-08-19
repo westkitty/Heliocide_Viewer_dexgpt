@@ -1,6 +1,6 @@
 {
-  "iteration": "05",
-  "revision": 5,
-  "checkpoint": "A_NORMAL",
-  "neighbor": "D_COLLAPSE"
+  "iteration": "06",
+  "revision": 6,
+  "checkpoint": "D_COLLAPSE",
+  "neighbor": "A_NORMAL"
 }
