@@ -1,0 +1,1 @@
+Raw canonical-primary transfer fallback. Each binary chunk is accepted only when its Git blob SHA matches the locally precomputed SHA. Final reconstruction must match SHA-256 17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73 before promotion to main.
