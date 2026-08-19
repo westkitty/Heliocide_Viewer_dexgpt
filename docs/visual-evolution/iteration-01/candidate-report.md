@@ -1,7 +1,7 @@
 # Candidate evidence
 
 Branch: `dexgpt-visual-01-candidate`
-Head: `abaedca69ad53549578982149e6b00aa1d521d7e`
+Head: `b39a64f72543396fe541610ce24abe204f1acbfb`
 Revision: 1
 Checkpoint: `A_NORMAL`
 Neighbor: `D_COLLAPSE`
