@@ -1,4 +1,4 @@
-import { vertexShader, fragmentShader } from './shaders.js';
+import { vertexShader, fragmentShader } from './shaderRevisionPatch.js';
 
 function compile(gl, type, source) {
   const shader = gl.createShader(type);
