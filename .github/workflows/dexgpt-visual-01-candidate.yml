@@ -1,0 +1,78 @@
+name: DexGPT Visual 01 Candidate
+
+on:
+  push:
+    branches:
+      - dexgpt-visual-01-candidate
+    paths:
+      - 'src/**'
+      - 'scripts/cdp-capture.mjs'
+      - '.github/workflows/dexgpt-visual-01-candidate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dexgpt-visual-01-candidate
+          fetch-depth: 0
+      - name: Validate source
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run validate
+      - name: Launch deterministic browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run serve > /tmp/dexgpt-serve.log 2>&1 &
+          browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$browser" ]; then echo 'No Chromium-family browser available' >&2; exit 2; fi
+          "$browser" --headless=new --no-sandbox --disable-dev-shm-usage --use-gl=angle --use-angle=swiftshader --remote-debugging-port=9227 --user-data-dir=/tmp/dexgpt-chrome about:blank > /tmp/dexgpt-chrome.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null 2>&1 && curl -fsS http://127.0.0.1:9227/json/version >/dev/null 2>&1 && exit 0
+            sleep 0.25
+          done
+          cat /tmp/dexgpt-serve.log >&2 || true
+          cat /tmp/dexgpt-chrome.log >&2 || true
+          exit 3
+      - name: Capture matched before and after
+        shell: bash
+        run: |
+          set -u
+          dir='docs/visual-evolution/iteration-01'
+          mkdir -p "$dir"
+          before_rc=0
+          after_rc=0
+          neighbor_rc=0
+          node --experimental-websocket scripts/cdp-capture.mjs 0 A_NORMAL "$dir/before.png" || before_rc=$?
+          node --experimental-websocket scripts/cdp-capture.mjs 1 A_NORMAL "$dir/after.png" || after_rc=$?
+          node --experimental-websocket scripts/cdp-capture.mjs 1 D_COLLAPSE "$dir/candidate-D_COLLAPSE.png" || neighbor_rc=$?
+          printf 'before_rc=%s\nafter_rc=%s\nneighbor_rc=%s\n' "$before_rc" "$after_rc" "$neighbor_rc" > "$dir/candidate-status.txt"
+          cat "$dir/candidate-status.txt"
+      - name: Persist candidate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'DexGPT visual QA'
+          git config user.email 'actions@users.noreply.github.com'
+          git add docs/visual-evolution/iteration-01 || true
+          if ! git diff --cached --quiet; then
+            git commit -m 'staging: visual-01 candidate evidence'
+            git push origin HEAD:dexgpt-visual-01-candidate
+          fi
+      - name: Enforce browser proof gate
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          status='docs/visual-evolution/iteration-01/candidate-status.txt'
+          test -f "$status"
+          grep -qx 'before_rc=0' "$status"
+          grep -qx 'after_rc=0' "$status"
+          grep -qx 'neighbor_rc=0' "$status"
