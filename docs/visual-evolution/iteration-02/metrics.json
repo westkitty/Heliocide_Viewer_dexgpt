@@ -1,0 +1,65 @@
+{
+  "iteration": 2,
+  "status": "CANDIDATE_PASS_ACCEPTANCE_BLOCKED",
+  "target": "Deterministic astronomical star distribution",
+  "authoritative_run_id": 32220732828,
+  "artifact_id": 9353868353,
+  "checkpoint": "A_NORMAL",
+  "neighbor": "D_COLLAPSE",
+  "technical_gate": {
+    "npm_ci": "PASS",
+    "typecheck_contracts": "PASS",
+    "tests": "PASS",
+    "build": "PASS",
+    "browser_startup": "PASS",
+    "before_capture": "PASS",
+    "after_capture": "PASS",
+    "neighbor_capture": "PASS",
+    "runtime_errors": 0,
+    "browser_errors": 0
+  },
+  "frame_ms": {
+    "before_p50": 16.5,
+    "before_p95": 18.4,
+    "before_p99": 18.7,
+    "after_p50": 16.5,
+    "after_p95": 17.2,
+    "after_p99": 17.2,
+    "neighbor_p50": 16.5,
+    "neighbor_p95": 17.1,
+    "neighbor_p99": 17.2,
+    "environment": "GitHub-hosted Chromium software WebGL; not representative hardware GPU proof"
+  },
+  "supplemental_pixel_delta": {
+    "mean_absolute_rgb_delta": 0.03409305555555556,
+    "pixels_any_channel_delta_gt_2": 667,
+    "pixels_any_channel_delta_gt_10": 577,
+    "dark_background_pixels_delta_gt_2": 624,
+    "note": "Pixel deltas are supplemental only; direct visual inspection is the acceptance basis."
+  },
+  "score": {
+    "before": {
+      "realism": 2,
+      "material": 3,
+      "lighting": 3,
+      "scale": 3,
+      "readability": 4,
+      "canon": 5,
+      "richness": 2,
+      "technical": 4,
+      "total": 26
+    },
+    "after": {
+      "realism": 3,
+      "material": 3,
+      "lighting": 3,
+      "scale": 4,
+      "readability": 4,
+      "canon": 5,
+      "richness": 3,
+      "technical": 4,
+      "total": 29
+    }
+  },
+  "acceptance_blocker": "Exact canonical primary Shard God asset is not yet published at assets/source-reference/shard-god/1761893423477.jpg.png; candidate runner used the explicitly documented ephemeral secondary-reference fallback."
+}
