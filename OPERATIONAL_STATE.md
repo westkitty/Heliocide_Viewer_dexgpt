@@ -21,7 +21,7 @@
 ## Current main baseline
 
 - Capture command waits are bounded; software-render screenshot capture has a separate 45-second ceiling.
-- `scripts/cdp-capture.mjs` now closes each completed Chromium CDP target after evidence is written so sequential software-WebGL captures do not accumulate rendering tabs. Pre-state-reconciliation helper repair commit: `dbd058d70ba29eaa9297d1b2e78d5b3d9e0b6a70`.
+- `scripts/cdp-capture.mjs` closes each completed Chromium CDP target after evidence is written so sequential software-WebGL captures do not accumulate rendering tabs.
 - Candidate workflow is serialized per `dexgpt-visual-*` branch with stale runs cancelled so evidence commits cannot race each other.
 - `scripts/capture.sh` has its required `scripts/cdp-capture.mjs` helper in the target repository.
 - `scripts/serve.mjs` suppresses Chromium's implicit favicon error with a no-content response.
@@ -68,15 +68,28 @@
 - Branch: `dexgpt-visual-03-candidate`; draft PR `#4` closed and unmerged.
 - Target: high-quality stellar sprite shader.
 - Attempt 01: **REJECTED**. Valid before/after frames exposed strongly vertical stellar streaks and an over-broad Gaussian halo; the third capture also failed because completed CDP targets were not being closed.
-- Generic target-cleanup repair was applied separately to `main` and then carried into the candidate.
 - Attempt 02 preserves visual-02 positions/population and applies a bounded revision-three-only shader source patch: screen-aspect compensation plus reduced Gaussian core/halo footprint and energy.
 - Attempt-02 evaluation head: `2a0308912e57b734326ff4cafd5f5353a97ff315`.
 - Authoritative successful workflow: run `32221960801`, attempt 2; artifact `9354263130`.
 - Full validation, browser startup, A_NORMAL revision-two before, A_NORMAL revision-three after, D_COLLAPSE revision-three neighbor, runtime/browser error checks, artifact persistence, and final proof gate passed.
-- A first run on the same source SHA had a transient Chromium startup failure before any app page opened; unchanged rerun passed, so no source mutation was attributed to that failure.
 - Direct review found compact stellar point-spread functions with restrained halos and preserved distribution. Sampled bright-component mean width/height ratio improved from about 0.57 in rejected attempt 01 to about 0.96 in attempt 02, consistent with near-circular screen footprints.
 - Software-WebGL timing: matched before p95 17.9 ms; after p95 19.5 ms; D_COLLAPSE p95 18.2 ms. Treat as regression screening, not representative hardware-GPU proof.
-- Candidate report, metrics, rejected-attempt record, and bug sweep are stored under `docs/visual-evolution/iteration-03/` on the candidate branch.
+- Verdict: **CANDIDATE PASS / NUMBERED ACCEPTANCE BLOCKED**.
+- Count contribution: **0**.
+
+## Visual-04 candidate
+
+- Branch: `dexgpt-visual-04-candidate`; draft PR `#5` closed and unmerged.
+- Target: galactic / deep-sky structure.
+- Attempt 01: **REJECTED** despite all technical/browser gates passing. The dormant revision-four block lifted most of the viewport into a broad violet veil that read as generic sci-fi fog and weakened black-sky contrast.
+- Attempt 02 implementation head: `a36e8d157c2892193a69fb1546720f620a0d01d3`.
+- Attempt 02 replaces only the deep-sky block with a localized gently curved band, deterministic coarse/fine dust mottling, a narrow dark lane, and much lower near-black navy/midnight-violet energy. It adds no stars and no twinkle.
+- Authoritative clean run: `32222861051`; artifact `9354557303`.
+- Full validation, browser startup, revision-three A_NORMAL before, revision-four A_NORMAL after, D_COLLAPSE neighbor, error checks, artifact persistence, and proof gate passed.
+- Direct review found the rejected global wash removed: most sky remains near-black while a faint structured band crosses the middle field; mottling and an interrupted dark lane are visible without turning the sky into neon/fog.
+- Supplemental localization screen: mean RGB delta about 5.83 through the middle half versus 2.95 top quartile and 1.85 bottom quartile, confirming the change is spatially concentrated rather than a global tint.
+- Software-WebGL timing: before p95 19.5 ms; after p95 17.1 ms; D_COLLAPSE p95 19.4 ms. No candidate regression observed; representative hardware remains unverified.
+- Candidate report, rejected-attempt record, metrics, and bug sweep are stored under `docs/visual-evolution/iteration-04/` on the candidate branch.
 - Verdict: **CANDIDATE PASS / NUMBERED ACCEPTANCE BLOCKED**.
 - Count contribution: **0**.
 
@@ -101,7 +114,8 @@
 
 ## Current next action
 
-1. Continue cumulative candidate engineering with visual-04, `Galactic / deep-sky structure`, carrying the proven visual-02 distribution and visual-03 sprite treatment forward.
-2. Compare revision three to revision four at the same A_NORMAL checkpoint and use D_COLLAPSE as a neighbor check; reject the attempt if the background reads like generic fog, neon sci-fi, or a visually negligible haze.
-3. Keep all candidate work uncounted until the exact canonical primary is published and the acceptance gate can run with no fallback.
-4. Once exact primary transfer is solved, rerun visual-01 acceptance against real canon, create the atomic `visual-01:` commit only after every gate passes, remotely verify it, then replay the already-proven candidate deltas sequentially into numbered acceptance commits without skipping required proof.
+1. Continue cumulative candidate engineering with visual-05, `Starfield stability / antialiasing`, carrying visual-02 distribution, visual-03 point-spread, and visual-04 deep-sky structure forward.
+2. Do not rely on a single static screenshot to prove stability. Add a deterministic subpixel-camera stability probe that compares the same star field across controlled fractional camera offsets while preserving the normal A_NORMAL before/after and D_COLLAPSE neighbor evidence.
+3. Restrict visual-05 implementation to sampling/point-spread stability and antialiasing; do not consume visual-06 exposure-integration work.
+4. Keep all candidate work uncounted until the exact canonical primary is published and acceptance can run with no fallback.
+5. Once exact primary transfer is solved, rerun visual-01 acceptance against real canon, create the atomic `visual-01:` commit only after every gate passes, remotely verify it, then replay the already-proven candidate deltas sequentially into numbered acceptance commits without skipping required proof.
