@@ -60,6 +60,35 @@ const visual04After = `  if(rev>=4.0){
   }
 `;
 
+const visual06DeepSkyAfter = `  if(rev>=4.0){
+    float bandAxis=p.y*.88 + .11*sin(p.x*1.25) + .025*sin(p.x*4.8);
+    float broadBand=exp(-pow(abs(bandAxis)/.32,2.0));
+    float coreBand=exp(-pow(abs(bandAxis)/.115,1.45));
+    float coarseDust=fbm(p*1.8+vec2(4.1,9.7));
+    float fineDust=fbm(p*5.2+vec2(13.7,2.9));
+    float mottling=(.28+.72*coarseDust)*(.58+.42*fineDust);
+    float laneAxis=bandAxis + .028*(coarseDust-.5);
+    float dustLane=exp(-pow(abs(laneAxis)/.038,1.55));
+    float skyExposure=rev>=6.0?mix(1.0,exposure,.55):1.0;
+    c += vec3(.0012,.0015,.0038)*broadBand*(.30+.70*mottling)*skyExposure;
+    c += vec3(.0045,.0035,.0085)*coreBand*(.22+.78*mottling)*skyExposure;
+    c *= 1.0-dustLane*(.48+.22*(1.0-fineDust));
+  }
+`;
+
+const visual06ExposureBefore = `  float exposure=1.0;
+  if(uRevision>=6.0) exposure=mix(.44,1.18,smoothstep(.34,.82,collapse));
+`;
+
+const visual06ExposureAfter = `  float exposure=1.0;
+  if(uRevision>=6.0){
+    float collapseFlare=smoothstep(.08,.48,collapse)*(1.0-smoothstep(.50,.82,collapse));
+    float remnantRecovery=smoothstep(.70,.98,collapse);
+    exposure=mix(1.0,.58,collapseFlare);
+    exposure=mix(exposure,1.12,remnantRecovery);
+  }
+`;
+
 const visual03Patched = baseFragmentShader.replace(visual03Before, visual03After);
 if (visual03Patched === baseFragmentShader || visual03Patched.indexOf(visual03Before) !== -1) {
   throw new Error('Visual-03 shader patch target mismatch.');
@@ -75,5 +104,15 @@ if (visual04Patched === visual05Patched || visual04Patched.indexOf(visual04Befor
   throw new Error('Visual-04 shader patch target mismatch.');
 }
 
+const visual06SkyPatched = visual04Patched.replace(visual04After, visual06DeepSkyAfter);
+if (visual06SkyPatched === visual04Patched || visual06SkyPatched.indexOf(visual04After) !== -1) {
+  throw new Error('Visual-06 deep-sky exposure patch target mismatch.');
+}
+
+const visual06Patched = visual06SkyPatched.replace(visual06ExposureBefore, visual06ExposureAfter);
+if (visual06Patched === visual06SkyPatched || visual06Patched.indexOf(visual06ExposureBefore) !== -1) {
+  throw new Error('Visual-06 exposure patch target mismatch.');
+}
+
 export { vertexShader };
-export const fragmentShader = visual04Patched;
+export const fragmentShader = visual06Patched;
