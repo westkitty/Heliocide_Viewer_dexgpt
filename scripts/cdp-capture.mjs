@@ -55,7 +55,7 @@ let metrics = null;
 for (let attempt = 0; attempt < 100; attempt += 1) {
   await sleep(100);
   const result = await send('Runtime.evaluate', {
-    expression: `JSON.stringify(window.__HELIOCIDE_METRICS__ ?? null)`,
+    expression: 'JSON.stringify(window.__HELIOCIDE_METRICS__ ?? null)',
     returnByValue: true
   });
   const value = result?.result?.value;
@@ -70,10 +70,8 @@ const shot = await send('Page.captureScreenshot', { format: 'png', fromSurface: 
 writeFileSync(output, Buffer.from(shot.data, 'base64'));
 const evidence = { pageUrl, revision, checkpoint, metrics, browserErrors };
 writeFileSync(output.replace(/\.png$/i, '.json'), JSON.stringify(evidence, null, 2));
+const failed = Boolean(metrics.errors?.length || browserErrors.length);
+if (failed) console.error(JSON.stringify(evidence));
+else console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, output }));
 ws.close();
-
-if (metrics.errors?.length || browserErrors.length) {
-  console.error(JSON.stringify(evidence));
-  process.exit(2);
-}
-console.log(JSON.stringify({ revision, checkpoint, frames: metrics.frames, p95: metrics.p95, output }));
+setTimeout(() => process.exit(failed ? 2 : 0), 100);
