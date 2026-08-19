@@ -2,7 +2,8 @@ name: DexGPT Binary Stage
 
 on:
   push:
-    branches: [dexgpt-staging]
+    branches:
+      - dexgpt-staging
     paths:
       - '.github/workflows/dexgpt-binary-stage.yml'
       - '.binary-stage/**'
@@ -20,122 +21,41 @@ jobs:
           ref: dexgpt-staging
           fetch-depth: 0
 
-      - name: Reconstruct or retrieve binaries and record evidence
+      - name: Reconstruct verified binary payloads
         shell: bash
         run: |
-          set -uo pipefail
-          mkdir -p docs/visual-evolution/tooling
-          LOG='docs/visual-evolution/tooling/canonical-drive-stage.log'
-          : > "$LOG"
-          rc=0
+          set -euo pipefail
+          LOG='docs/visual-evolution/tooling/binary-stage.log'
+          mkdir -p "$(dirname "$LOG")"
+          printf 'trigger_sha=%s\n' "$GITHUB_SHA" > "$LOG"
 
-          if [ -f .binary-stage/canva-primary.request ]; then
-            EXPECTED_PIXELS='77e5efea67ae7e6150667c49dc81089a884c99a3df726626f0816ecdea5d4981'
-            EXPECTED_FILE='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+          if [ -f .binary-stage/raw-primary.parts ]; then
             OUT='assets/source-reference/shard-god/1761893423477.jpg.png'
-            URL='https://media.canva.com/v2/image-resize/format:PNG/height:1248/quality:100/uri:ifs%3A%2F%2FM%2F37b55bdc-1b17-4435-bbf5-8377eb01bc30/watermark:F/width:832?csig=AAAAAAAAAAAAAAAAAAAAADmgHL1GktRVcBHw1w_w6OApExQj_9B_BEXc87zvC-57&exp=1787128409&osig=AAAAAAAAAAAAAAAAAAAAAHSrWPTYzw3lusnhSd_pUVunkO-ER70Anb0pztjlK2Mg&signer=media-rpc&x-canva-quality=thumbnail'
-            tmp="$(mktemp --suffix=.png)"
-            http="$(curl -L --silent --show-error --max-time 90 -o "$tmp" -w '%{http_code}' "$URL" || true)"
-            bytes="$(wc -c < "$tmp" | tr -d ' ')"
-            file_sha="$(sha256sum "$tmp" | awk '{print $1}')"
-            printf 'CANVA http=%s bytes=%s sha256=%s\n' "$http" "$bytes" "$file_sha" >> "$LOG"
-            pixel_result="$(python3 - "$tmp" <<'PY'
-import hashlib, subprocess, sys
-p=sys.argv[1]
-try:
-    from PIL import Image
-except Exception:
-    subprocess.run([sys.executable,'-m','pip','install','--quiet','pillow'],check=True)
-    from PIL import Image
-try:
-    im=Image.open(p).convert('RGBA')
-    print(f'{im.width}x{im.height} {hashlib.sha256(im.tobytes()).hexdigest()}')
-except Exception as e:
-    print(f'ERROR {type(e).__name__}:{e}')
-PY
-)"
-            printf 'CANVA_PIXELS %s\n' "$pixel_result" >> "$LOG"
-            dims="${pixel_result%% *}"
-            pixel_sha="${pixel_result##* }"
-            if [ "$http" = '200' ] && [ "$dims" = '832x1248' ] && [ "$pixel_sha" = "$EXPECTED_PIXELS" ]; then
-              mkdir -p "$(dirname "$OUT")"
-              mv "$tmp" "$OUT"
-              printf 'CANVA_RESULT PASS original_sha256=%s stored_sha256=%s\n' "$EXPECTED_FILE" "$file_sha" >> "$LOG"
-              rm -f .binary-stage/canva-primary.request .binary-stage/primary.part.*
-            else
-              rm -f "$tmp"
-              echo 'CANVA_RESULT FAIL pixel mismatch or download failure' >> "$LOG"
+            EXPECTED='17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73'
+            mkdir -p "$(dirname "$OUT")"
+            : > "$OUT"
+            while IFS= read -r part; do
+              [ -n "$part" ] || continue
+              cat ".binary-stage/raw-primary/$part" >> "$OUT"
+            done < .binary-stage/raw-primary.parts
+            ACTUAL="$(sha256sum "$OUT" | awk '{print $1}')"
+            BYTES="$(wc -c < "$OUT" | tr -d ' ')"
+            printf 'primary_bytes=%s\nprimary_sha256=%s\n' "$BYTES" "$ACTUAL" >> "$LOG"
+            if [ "$ACTUAL" != "$EXPECTED" ]; then
+              rm -f "$OUT"
+              echo 'RESULT FAIL primary hash mismatch' >> "$LOG"
+              exit 1
             fi
-          elif [ -f .binary-stage/canonical-assets.request ]; then
-            fetch_drive_match() {
-              local expected="$1"
-              local out="$2"
-              shift 2
-              mkdir -p "$(dirname "$out")"
-              echo "TARGET $out EXPECTED $expected" >> "$LOG"
-              for id in "$@"; do
-                tmp="$(mktemp)"
-                for url in \
-                  "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t" \
-                  "https://drive.google.com/uc?export=download&id=${id}&confirm=t"; do
-                  http="$(curl -L --silent --show-error --retry 1 --max-time 60 -o "$tmp" -w '%{http_code}' "$url" || true)"
-                  bytes="$(wc -c < "$tmp" | tr -d ' ')"
-                  actual="$(sha256sum "$tmp" | awk '{print $1}')"
-                  echo "TRY id=$id http=$http bytes=$bytes sha256=$actual" >> "$LOG"
-                  if [ "$http" = '200' ] && [ "$actual" = "$expected" ]; then
-                    mv "$tmp" "$out"
-                    echo "MATCH id=$id out=$out" >> "$LOG"
-                    return 0
-                  fi
-                done
-                rm -f "$tmp"
-              done
-              echo "NO_MATCH out=$out" >> "$LOG"
-              return 1
-            }
-            fetch_drive_match \
-              '17fbbffea8e4e079295b0cd651dcccb4749d4548d209c9b1bdd74ae6d504ee73' \
-              'assets/source-reference/shard-god/1761893423477.jpg.png' \
-              '1JQGkyUBru2yDz0UZKCjqpakdin6gl20m' \
-              '1ZETwfDusGnwDA4JuxtQ5-W3B2UeCqYEM' \
-              '1Jv8EonzWXn_Ox25iYgBjcMYzNb0Ba-Zz' || rc=1
-            fetch_drive_match \
-              '7bded902f531b3419908aab60c043fe1d379a47d7db91cd3ae514fd1811c817a' \
-              'assets/source-reference/shard-god/1763713752850.jpg' \
-              '1jFUMxJM8gjaEvBmcXNElIzpvlPSZ7pEN' \
-              '1IjUNOxW5aNThEGg04iZNsXHNdMTOUcE4' \
-              '1Xr7_--6UJwBasJo-a8BAwm5x_PWVzWOb' \
-              '18xGx0T7rXTvDMxGAzLS9p6Vs5toqmuPy' \
-              '1Zqygp9DmNZmLsL4FpM_LuPFJQY4L_A5z' || rc=1
-            if [ "$rc" -eq 0 ]; then
-              rm -f .binary-stage/canonical-assets.request
-              echo 'RESULT PASS' >> "$LOG"
-            else
-              echo 'RESULT FAIL' >> "$LOG"
-            fi
-          elif compgen -G '.binary-stage/*.parts' > /dev/null; then
-            set -e
-            while IFS= read -r manifest; do
-              out="$(head -n 1 "$manifest")"
-              mkdir -p "$(dirname "$out")"
-              : > "$out.b64"
-              tail -n +2 "$manifest" | while IFS= read -r part; do
-                cat ".binary-stage/$part" >> "$out.b64"
-              done
-              base64 -d "$out.b64" > "$out"
-              rm "$out.b64"
-            done < <(find .binary-stage -maxdepth 1 -name '*.parts' -print | sort)
-            echo 'RESULT PASS parts' >> "$LOG"
+            rm -rf .binary-stage/raw-primary .binary-stage/raw-primary.parts
+            echo 'RESULT PASS exact canonical primary' >> "$LOG"
           else
-            printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 -d > docs/visual-evolution/tooling/binary-probe.png
-            echo 'RESULT PASS probe' >> "$LOG"
+            echo 'RESULT PASS trigger-only' >> "$LOG"
           fi
 
           git config user.name 'DexGPT staging'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m 'staging: reconstruct binary payloads'
+            git commit -m 'staging: reconstruct verified binary payloads'
             git push origin HEAD:dexgpt-staging
           fi
-          exit "$rc"
