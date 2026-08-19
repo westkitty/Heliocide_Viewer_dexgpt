@@ -1,4 +1,4 @@
-export const VISUAL_REVISION = 0;
+export const VISUAL_REVISION = 3;
 
 export const VISUAL_TARGETS = [
   'Cinematic color management foundation',
